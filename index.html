@@ -53,6 +53,14 @@
   #lightbox { position: fixed; inset: 0; background: rgba(10,8,16,.92); display: none;
     align-items: center; justify-content: center; z-index: 30; cursor: zoom-out; }
   #lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 8px; }
+  /* チャット通知トースト（右上） */
+  #toasts { position: fixed; top: 12px; right: 12px; z-index: 28;
+    display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .toast { background: rgba(28,22,40,.95); border: 2px solid #e8b45a; border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; max-width: 280px; color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4); animation: toastIn .18s ease-out; }
+  .toast .n { color: #e8b45a; font-weight: bold; }
+  @keyframes toastIn { from { transform: translateX(24px); opacity: 0; } }
   #chatForm { display: flex; gap: 4px; padding: 6px; border-top: 2px solid #120d1c; }
   #chatInput { flex: 1; min-width: 0; padding: 8px; font-size: 13px; color: #222; border-radius: 6px; border: none; }
   #bar { width: min(1360px, 98vw); margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -140,6 +148,7 @@
 <footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。</footer>
 
 <div id="lightbox"><img id="lightboxImg"></div>
+<div id="toasts"></div>
 
 <div id="login">
   <div id="loginBox">
@@ -693,7 +702,9 @@ function connect() {
   db.ref('rooms/main/chat').limitToLast(40).on('child_added', snap => {
     const m = snap.val(); if (!m) return;
     addLog(m.n, m.t || '', m.ts, m.img);
-    if (Date.now() - (m.ts || 0) < 15000 && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
+    const fresh = Date.now() - (m.ts || 0) < 15000;
+    if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
+    if (fresh && (!me || m.pid !== me.id)) toast(m.n, m.t || '📷 画像');
   });
   db.ref('rooms/main/deco').on('child_added', snap => { decos[snap.key] = snap.val(); });
   db.ref('rooms/main/deco').on('child_removed', snap => { delete decos[snap.key]; });
@@ -738,6 +749,17 @@ function addLog(n, t, ts, img) {
 document.getElementById('lightbox').addEventListener('click', () => {
   document.getElementById('lightbox').style.display = 'none';
 });
+// チャット通知トースト（右上・5秒で消える・最大3件）
+function toast(name, text) {
+  const box = document.getElementById('toasts');
+  const d = document.createElement('div'); d.className = 'toast';
+  const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = '💬 ' + name + '：';
+  d.appendChild(nm);
+  d.appendChild(document.createTextNode(text.length > 42 ? text.slice(0, 42) + '…' : text));
+  box.appendChild(d);
+  while (box.children.length > 3) box.removeChild(box.firstChild);
+  setTimeout(() => d.remove(), 5000);
+}
 
 // ================= 画面共有（WebRTC・P2P） =================
 const RTC_CONF = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
