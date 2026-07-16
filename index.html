@@ -26,10 +26,11 @@
   }
   canvas.game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
   #sharePane {
-    position: absolute; top: 8px; right: 8px; width: 46%;
+    position: absolute; top: 8px; right: 8px; width: 58%;
     background: #17121f; border: 2px solid #e8b45a; border-radius: 8px;
     display: none; z-index: 5; overflow: hidden;
   }
+  #shareHead button { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 0 4px; }
   #shareHead { display: flex; justify-content: space-between; align-items: center;
     padding: 4px 8px; font-size: 12px; background: #2c2340; }
   #shareClose { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 0 4px; }
@@ -46,6 +47,12 @@
   #log .n { color: #e8b45a; font-weight: bold; }
   #log .t { color: #eee; }
   #log .tm { color: #8a80a0; font-size: 10px; margin-right: 5px; }
+  #log a { color: #8ac8f8; word-break: break-all; }
+  #log img.chatimg { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 3px 0; cursor: zoom-in; }
+  #imgBtn { padding: 8px 10px; }
+  #lightbox { position: fixed; inset: 0; background: rgba(10,8,16,.92); display: none;
+    align-items: center; justify-content: center; z-index: 30; cursor: zoom-out; }
+  #lightbox img { max-width: 94vw; max-height: 94vh; border-radius: 8px; }
   #chatForm { display: flex; gap: 4px; padding: 6px; border-top: 2px solid #120d1c; }
   #chatInput { flex: 1; min-width: 0; padding: 8px; font-size: 13px; color: #222; border-radius: 6px; border: none; }
   #bar { width: min(1360px, 98vw); margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -95,7 +102,7 @@
   <div id="stageWrap"><div id="stage">
     <canvas id="cv" class="game" width="2560" height="1760"></canvas>
     <div id="sharePane">
-      <div id="shareHead"><span id="shareTitle">画面共有</span><button id="shareClose">✕</button></div>
+      <div id="shareHead"><span id="shareTitle">画面共有</span><span><button id="shareFull" title="全画面で見る">⛶ 全画面</button><button id="shareClose">✕</button></span></div>
       <video id="shareVideo" autoplay playsinline muted></video>
     </div>
   </div></div>
@@ -103,6 +110,8 @@
     <div id="chatHead"><span>💬 チャット</span><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></div>
     <div id="log"></div>
     <div id="chatForm">
+      <button id="imgBtn" title="画像を送る">📎</button>
+      <input id="imgInput" type="file" accept="image/*" style="display:none">
       <input id="chatInput" type="text" maxlength="200" placeholder="メッセージ…">
       <button id="sendBtn">送信</button>
     </div>
@@ -129,6 +138,8 @@
 </div>
 
 <footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。</footer>
+
+<div id="lightbox"><img id="lightboxImg"></div>
 
 <div id="login">
   <div id="loginBox">
@@ -681,8 +692,8 @@ function connect() {
   });
   db.ref('rooms/main/chat').limitToLast(40).on('child_added', snap => {
     const m = snap.val(); if (!m) return;
-    addLog(m.n, m.t, m.ts);
-    if (Date.now() - (m.ts || 0) < 15000 && m.pid) bubbles[m.pid] = { text: m.t, until: Date.now() + 7000 };
+    addLog(m.n, m.t || '', m.ts, m.img);
+    if (Date.now() - (m.ts || 0) < 15000 && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
   });
   db.ref('rooms/main/deco').on('child_added', snap => { decos[snap.key] = snap.val(); });
   db.ref('rooms/main/deco').on('child_removed', snap => { delete decos[snap.key]; });
@@ -692,18 +703,41 @@ function connect() {
   });
   watchScreen();
 }
-function addLog(n, t, ts) {
+function linkify(el, text) {
+  const re = /(https?:\/\/[^\s]+)/g;
+  let last = 0, m2;
+  while ((m2 = re.exec(text))) {
+    el.appendChild(document.createTextNode(text.slice(last, m2.index)));
+    const a = document.createElement('a');
+    a.href = m2[0]; a.textContent = m2[0]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    el.appendChild(a);
+    last = re.lastIndex;
+  }
+  el.appendChild(document.createTextNode(text.slice(last)));
+}
+function addLog(n, t, ts, img) {
   const log = document.getElementById('log');
   const div = document.createElement('div');
   const d = new Date(ts || Date.now());
   const tm = document.createElement('span'); tm.className = 'tm';
   tm.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = n + '：';
-  const tx = document.createElement('span'); tx.className = 't'; tx.textContent = t;
-  div.appendChild(tm); div.appendChild(nm); div.appendChild(tx);
+  div.appendChild(tm); div.appendChild(nm);
+  if (t) { const tx = document.createElement('span'); tx.className = 't'; linkify(tx, t); div.appendChild(tx); }
+  if (img) {
+    const im2 = document.createElement('img'); im2.className = 'chatimg'; im2.src = img;
+    im2.addEventListener('click', () => {
+      document.getElementById('lightboxImg').src = img;
+      document.getElementById('lightbox').style.display = 'flex';
+    });
+    div.appendChild(im2);
+  }
   log.appendChild(div); log.scrollTop = log.scrollHeight;
   while (log.children.length > 80) log.removeChild(log.firstChild);
 }
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').style.display = 'none';
+});
 
 // ================= 画面共有（WebRTC・P2P） =================
 const RTC_CONF = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -910,7 +944,7 @@ async function saveChatMd() {
   if (!db) { alert('入室してから保存してね'); return; }
   const snap = await db.ref('rooms/main/chat').once('value');
   const msgs = [];
-  snap.forEach(s => { const m = s.val(); if (m && m.t) msgs.push(m); });
+  snap.forEach(s => { const m = s.val(); if (m && (m.t || m.img)) msgs.push(m); });
   if (!msgs.length) { alert('まだチャットがありません'); return; }
   msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const pad = v => String(v).padStart(2, '0');
@@ -920,7 +954,7 @@ async function saveChatMd() {
     const d = new Date(m.ts || 0);
     const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (day !== curDay) { curDay = day; md += `\n## ${day}\n\n`; }
-    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${m.t}\n`;
+    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${m.t || '📷（画像）'}\n`;
   }
   const now = new Date();
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -932,6 +966,34 @@ async function saveChatMd() {
 }
 document.getElementById('chatSaveBtn').addEventListener('click', saveChatMd);
 document.getElementById('sendBtn').addEventListener('click', sendChat);
+// 画像添付（800pxに縮小してJPEG化→チャットに載せる）
+document.getElementById('imgBtn').addEventListener('click', () => {
+  if (!me || !db) { alert('入室してから送ってね'); return; }
+  document.getElementById('imgInput').click();
+});
+document.getElementById('imgInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f || !me || !db) return;
+  const img = new Image();
+  img.onload = () => {
+    const sc2 = Math.min(1, 800 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * sc2); c.height = Math.round(img.height * sc2);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(img.src);
+    let data = c.toDataURL('image/jpeg', 0.72);
+    if (data.length > 380000) data = c.toDataURL('image/jpeg', 0.45);
+    if (data.length > 380000) { alert('画像が大きすぎて送れませんでした🙏'); return; }
+    db.ref('rooms/main/chat').push({ n: me.name, pid: me.id, img: data, ts: firebase.database.ServerValue.TIMESTAMP });
+  };
+  img.src = URL.createObjectURL(f);
+});
+// 画面共有の全画面表示
+document.getElementById('shareFull').addEventListener('click', () => {
+  const v = document.getElementById('shareVideo');
+  (v.requestFullscreen || v.webkitRequestFullscreen || function(){}).call(v);
+});
 // 日本語入力の変換確定Enterでは送信しない（2回送信バグ対策）
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) sendChat();
