@@ -10,8 +10,8 @@ window.FIREBASE_CONFIG = {
   appId: "1:304607530637:web:8aa1f106f2963e0a70dcc4"
 };
 
-// Discordボイスチャンネルへのリンク（うりぽん号のボイスchの招待/チャンネルURLに差し替える）
-window.DISCORD_VOICE_URL = "";
+// Discordボイスチャンネルへのリンク（うりぽん号のボイスch）
+window.DISCORD_VOICE_URL = "https://discord.com/channels/1427549476062625905/1527009272041443441";
 
 // Discord通知用Webhook URL（作業開始・帰宅・画面共有をお知らせするチャンネルのWebhook）
 // ※このURLを知っている人は誰でもそのチャンネルに投稿できる。荒らされたらDiscord側でウェブフックを削除→再作成して差し替える
