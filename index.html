@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>うりぽん号メタ部屋</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #241e30; color: #f4ead2;
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDGothic", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 8px;
+    touch-action: manipulation;
+  }
+  header { text-align: center; margin: 2px 0 8px; }
+  h1 { font-size: 18px; letter-spacing: 2px; }
+  #online { font-size: 12px; opacity: .8; }
+  #main { display: flex; gap: 8px; width: min(1360px, 98vw); align-items: stretch; }
+  #stageWrap { flex: 1; min-width: 0; }
+  #stage {
+    position: relative; width: 100%;
+    aspect-ratio: 640 / 440;
+    border: 4px solid #120d1c; border-radius: 6px;
+    overflow: hidden; background: #120d1c;
+  }
+  canvas.game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
+  #sharePane {
+    position: absolute; top: 8px; right: 8px; width: 46%;
+    background: #17121f; border: 2px solid #e8b45a; border-radius: 8px;
+    display: none; z-index: 5; overflow: hidden;
+  }
+  #shareHead { display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 8px; font-size: 12px; background: #2c2340; }
+  #shareClose { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 0 4px; }
+  #shareVideo { width: 100%; display: block; background: #000; }
+  #chatPanel { width: 270px; display: flex; flex-direction: column;
+    background: #1c1628; border: 3px solid #120d1c; border-radius: 6px; }
+  #chatHead { padding: 8px 10px; font-size: 13px; font-weight: bold; background: #2c2340; border-radius: 3px 3px 0 0; }
+  #log { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; line-height: 1.7; min-height: 0; }
+  #log .n { color: #e8b45a; font-weight: bold; }
+  #log .t { color: #eee; }
+  #chatForm { display: flex; gap: 4px; padding: 6px; border-top: 2px solid #120d1c; }
+  #chatInput { flex: 1; min-width: 0; padding: 8px; font-size: 13px; color: #222; border-radius: 6px; border: none; }
+  #bar { width: min(1360px, 98vw); margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  button { font-family: inherit; font-size: 14px; border-radius: 6px; border: 2px solid #120d1c;
+    padding: 8px 14px; background: #4a3f63; color: #fff; cursor: pointer; }
+  button.active { background: #e8b45a; color: #17121f; font-weight: bold; }
+  #goHomeBtn { background: #8a4a5a; }
+  #discordBtn { background: #5865F2; }
+  #shareBtn.sharing { background: #d84848; }
+  #decoBtn.active { background: #e07ab0; color: #fff; }
+  #decoBar { width: min(1360px, 98vw); margin-top: 6px; display: none; gap: 6px; flex-wrap: wrap; align-items: center;
+    background: #1c1628; padding: 8px; border-radius: 6px; border: 2px solid #e07ab0; }
+  #decoBar .dc { font-size: 13px; padding: 6px 10px; }
+  #decoBar .dc.sel { background: #e07ab0; color: #fff; font-weight: bold; }
+  #decoBar .hint { font-size: 11px; opacity: .7; width: 100%; }
+  footer { margin-top: 8px; font-size: 11px; opacity: .55; text-align: center; line-height: 1.6; }
+  @media (max-width: 760px) {
+    #main { flex-direction: column; }
+    #chatPanel { width: 100%; height: 190px; }
+    #sharePane { width: 70%; }
+  }
+  #login { position: fixed; inset: 0; background: rgba(18,13,28,.94);
+    display: flex; align-items: center; justify-content: center; z-index: 20; overflow-y: auto; }
+  #loginBox { background: #2c2340; border: 3px solid #e8b45a; border-radius: 12px;
+    padding: 20px; width: min(440px, 94vw); text-align: center; margin: auto; }
+  #loginBox h2 { font-size: 16px; margin-bottom: 12px; }
+  #nameInput { width: 100%; padding: 10px; font-size: 16px; color: #222; margin-bottom: 10px; border-radius: 6px; border: none; }
+  #preview { image-rendering: pixelated; width: 144px; height: 168px; background: #4a3f63; border-radius: 8px; margin-bottom: 8px; }
+  .optRow { display: flex; gap: 5px; justify-content: center; margin: 6px 0; flex-wrap: wrap; align-items: center; }
+  .optRow .lbl { font-size: 12px; opacity: .8; width: 100%; text-align: left; }
+  .sw { width: 26px; height: 26px; border-radius: 6px; border: 3px solid transparent; cursor: pointer; }
+  .sw.sel { border-color: #fff; }
+  .hs { min-width: 44px; height: 30px; border-radius: 6px; border: 3px solid transparent; cursor: pointer;
+    background: #4a3f63; color: #fff; font-size: 11px; padding: 0 4px; }
+  .hs.sel { border-color: #fff; }
+  #enterBtn { width: 100%; padding: 12px; font-size: 16px; background: #e8b45a; color: #17121f; font-weight: bold; margin-top: 10px; }
+  #err { color: #ff9c9c; font-size: 12px; margin-top: 8px; min-height: 1em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚢 うりぽん号メタ部屋</h1>
+  <div id="online">はじめに「入室する」を押してね</div>
+</header>
+
+<div id="main">
+  <div id="stageWrap"><div id="stage">
+    <canvas id="cv" class="game" width="2560" height="1760"></canvas>
+    <div id="sharePane">
+      <div id="shareHead"><span id="shareTitle">画面共有</span><button id="shareClose">✕</button></div>
+      <video id="shareVideo" autoplay playsinline muted></video>
+    </div>
+  </div></div>
+  <div id="chatPanel">
+    <div id="chatHead">💬 チャット</div>
+    <div id="log"></div>
+    <div id="chatForm">
+      <input id="chatInput" type="text" maxlength="200" placeholder="メッセージ…">
+      <button id="sendBtn">送信</button>
+    </div>
+  </div>
+</div>
+
+<div id="bar">
+  <button id="stWork">▶ 作業開始</button>
+  <button id="stBreak">☕ 休憩中</button>
+  <button id="goHomeBtn">🏠 帰宅</button>
+  <button id="danceBtn">💃 ダンス</button>
+  <button id="ssjBtn">⚡ 覚醒</button>
+  <button id="shareBtn">🖥 画面共有</button>
+  <button id="decoBtn">🎨 デコ・模様替え</button>
+  <button id="discordBtn">🎧 ボイス(Discord)</button>
+  <button id="dressBtn">👗 着替える</button>
+</div>
+<div id="decoBar">
+  <span class="hint">🎨 模様替えモード: <b>家具やデコをつまんでドラッグで移動</b>。アイテムを選んで床クリックで設置、「🗑削除」でデコを片付け（配置はみんなに同期・保存されます）</span>
+  <span id="decoItems" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+  <button id="decoDelBtn" class="dc">🗑 削除</button>
+  <button id="decoResetBtn" class="dc">↺ 家具を初期配置に</button>
+  <button id="decoDone" class="dc">✅ おわり</button>
+</div>
+
+<footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。</footer>
+
+<div id="login">
+  <div id="loginBox">
+    <h2>🚢 うりぽん号メタ部屋へようこそ</h2>
+    <canvas id="preview" width="72" height="84"></canvas>
+    <input id="nameInput" type="text" maxlength="16" placeholder="なまえ（ニックネーム）">
+    <div class="optRow"><span class="lbl">かみがた</span><span id="hairStyles" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">かみの色</span><span id="hairColors" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">あたま（かぶりもの）</span><span id="accs" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">トップス</span><span id="shirtColors" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">ボトムス</span><span id="pantsColors" class="optRow"></span></div>
+    <button id="enterBtn">入室する</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+'use strict';
+// ================= 基本設定 =================
+const S = 4, W = 640, H = 440;
+const SPEED = 62, DASH = 1.9;
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const HAIR_STYLES = ['ボブ', 'ロング', 'ツン', 'おだんご'];
+const HAIR_COLORS  = ['#4a2c14', '#1e1a22', '#8a5a2a', '#b8862e', '#8a4a5a', '#5a6a8a',
+  '#f070b0', '#e04848', '#4890e8', '#48c078', '#9868e0', '#40c8c8', '#e8e8f0', '#f0c040'];
+const ACCS = ['なし', '🐱ねこ耳', '🐰うさ耳', '🐻くま耳', '👒麦わら', '🧢キャップ', '🐸着ぐるみ'];
+const SHIRT_COLORS = ['#f2d049', '#e0607a', '#4f86dc', '#4cc27e', '#bc62dc', '#e0703c', '#3cc0c0', '#f0f0ee'];
+const PANTS_COLORS = ['#f6f4f0', '#3c3c46', '#5a3c2a', '#37548a', '#7a3c50', '#4a604a'];
+const O = '#241a10';
+
+// ================= ピクセル描画ヘルパー =================
+let g;
+function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+function outlineRect(x, y, w, h, c) { px(x - 1, y - 1, w + 2, h + 2, O); px(x, y, w, h, c); }
+function shade(hex, amt) {
+  const cl = v => Math.max(0, Math.min(255, v));
+  const n = parseInt(hex.slice(1), 16);
+  return `rgb(${cl((n >> 16) + amt)},${cl(((n >> 8) & 255) + amt)},${cl((n & 255) + amt)})`;
+}
+
+// ================= 家具パーツの描画 =================
+function fPiano(x, y) {
+  outlineRect(x, y, 30, 16, '#1e1a22'); px(x + 1, y + 1, 28, 5, '#38323e'); px(x + 2, y + 11, 24, 3, '#f0f0f0');
+  for (let i = 0; i < 8; i++) px(x + 4 + i * 3, y + 11, 1, 3, '#222');
+}
+function fBar(x, y) {
+  outlineRect(x, y, 110, 14, '#6e4a28'); px(x, y, 110, 4, '#8a5f38'); px(x, y + 12, 110, 2, '#5a3a1e');
+  for (let i = 0; i < 4; i++) { px(x + 8 + i * 10, y - 4, 4, 6, '#d8b830'); px(x + 9 + i * 10, y - 6, 2, 3, '#888'); }
+  for (let i = 0; i < 5; i++) px(x + 56 + i * 8, y + 2, 4, 5, '#f0e8c8');
+  outlineRect(x + 92, y - 6, 14, 12, '#3a3a42'); px(x + 94, y - 4, 10, 5, '#e8e0d0');
+  for (let i = 0; i < 5; i++) outlineRect(x + 8 + i * 18, y + 20, 8, 6, '#c04848');
+}
+function fCafeTable(x, y, c) {
+  g.fillStyle = c; g.beginPath(); g.ellipse(x + 6, y + 5, 15, 9, 0, 0, 7); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(x + 6, y + 7, 15, 7, 0, 0, 7); g.fill();
+  outlineRect(x, y, 12, 9, '#e8e0d0'); px(x, y, 12, 3, '#f4eee0');
+  px(x - 8, y + 2, 5, 5, '#f0f0f0'); px(x + 15, y + 2, 5, 5, '#f0f0f0');
+}
+function fBooth(x, y) {
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x - 2, y + 22, 26, 5);
+  outlineRect(x, y, 22, 7, '#68a848'); px(x + 1, y + 1, 20, 2, '#80c060');
+  outlineRect(x, y + 19, 22, 7, '#68a848'); px(x + 1, y + 20, 20, 2, '#80c060');
+  outlineRect(x + 3, y + 9, 16, 8, '#e8e0d0'); px(x + 3, y + 9, 16, 3, '#f4eee0');
+}
+function fPodDesk(x, y) {
+  outlineRect(x, y, 40, 12, '#1a1a20');
+  px(x + 2, y + 2, 16, 8, '#2a6a9a'); px(x + 20, y + 2, 16, 8, '#2a6a9a');
+  px(x + 3, y + 3, 8, 2, '#8adcf8'); px(x + 21, y + 3, 8, 2, '#8adcf8');
+  fGamingChair(x + 4, y + 24); fGamingChair(x + 24, y + 24);
+}
+function fGamingChair(x, y) {
+  outlineRect(x, y, 12, 6, '#2a2a32'); px(x + 1, y + 1, 10, 2, '#c04858');
+  outlineRect(x + 2, y - 6, 8, 6, '#2a2a32'); px(x + 3, y - 5, 6, 3, '#c04858');
+}
+function fPalm(x, y) {
+  px(x + 2, y - 2, 4, 16, '#8a6a3a'); px(x + 3, y - 2, 1, 16, '#a8854a');
+  g.fillStyle = '#3a9a4a';
+  for (const [dx, dy] of [[-6, -6], [6, -6], [-8, 0], [8, 0], [0, -10]]) {
+    g.beginPath(); g.ellipse(x + 4 + dx, y + dy, 8, 3.5, dx * .06, 0, 7); g.fill();
+  }
+}
+function fTv(x, y) { outlineRect(x, y, 30, 14, '#3a3a42'); px(x + 2, y + 2, 26, 10, '#4a90c8'); px(x + 4, y + 4, 10, 2, '#a8dcf0'); }
+function fShelf(x, y) {
+  outlineRect(x, y, 24, 18, '#8a5f38'); px(x, y, 24, 2, '#a8783e');
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++)
+    px(x + 2 + i * 3.5, y + 3 + r * 8, 2.5, 6, ['#c05858', '#5878c0', '#58a058', '#c0a040', '#9058b0'][(i + r) % 5]);
+}
+function fBoard(x, y) {
+  outlineRect(x, y, 34, 14, '#a87848'); px(x + 2, y + 2, 30, 10, '#e8d8b0');
+  px(x + 5, y + 4, 9, 3, '#e88a8a'); px(x + 17, y + 5, 9, 3, '#8ab2e0'); px(x + 8, y + 9, 10, 3, '#a8d890');
+}
+function fPlant(x, y) {
+  outlineRect(x, y + 5, 10, 7, '#a86a3a'); px(x + 1, y + 6, 8, 2, '#c08048');
+  g.fillStyle = '#4a9a4a'; g.beginPath(); g.arc(x + 5, y + 1, 7, 0, 7); g.fill();
+  g.fillStyle = '#5ab45a'; g.beginPath(); g.arc(x + 3, y - 1, 4, 0, 7); g.fill();
+}
+function fSofaSet(x, y, c) {
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(x + 24, y + 16, 40, 17, 0, 0, 7); g.fill();
+  outlineRect(x, y, 48, 9, c); px(x, y, 48, 3, shade(c, 30));
+  outlineRect(x, y + 24, 48, 9, c); px(x, y + 24, 48, 3, shade(c, 30));
+  outlineRect(x + 14, y + 12, 20, 9, '#e8e0d0'); px(x + 14, y + 12, 20, 3, '#f4eee0');
+  px(x + 18, y + 14, 5, 4, '#c8e8f0'); px(x + 26, y + 14, 5, 4, '#f0d0a0');
+}
+function fThSofaV(x, y) { outlineRect(x, y, 12, 50, '#c04848'); px(x + 1, y + 1, 10, 48, '#d86060'); px(x + 1, y + 1, 4, 48, '#e87878'); }
+function fThSofaH(x, y) { outlineRect(x, y, 72, 12, '#c04848'); px(x + 1, y + 1, 70, 10, '#d86060'); px(x + 1, y + 1, 70, 4, '#e87878'); }
+function fThRug(x, y) {
+  g.fillStyle = '#4868b0'; g.beginPath(); g.ellipse(x + 34, y + 15, 34, 15, 0, 0, 7); g.fill();
+  g.fillStyle = '#6888c8'; g.beginPath(); g.ellipse(x + 34, y + 15, 22, 9, 0, 0, 7); g.fill();
+}
+function fThTable(x, y) {
+  outlineRect(x, y, 20, 10, '#e8e0d0'); px(x, y, 20, 4, '#f4eee0');
+  px(x + 4, y + 2, 5, 4, '#f0d0a0'); px(x + 12, y + 2, 5, 4, '#c8e8f0');
+}
+function fPopcorn(x, y) {
+  outlineRect(x, y, 14, 20, '#d84848'); px(x + 2, y + 2, 10, 8, '#f8f0d8'); px(x + 4, y + 4, 6, 4, '#f0d048');
+  px(x + 2, y + 12, 10, 2, '#f0f0f0');
+}
+function fTansu(x, y) {
+  outlineRect(x, y, 36, 18, '#8a5f38'); px(x + 2, y + 2, 32, 6, '#a8783e'); px(x + 2, y + 10, 32, 6, '#a8783e');
+  px(x + 14, y + 4, 5, 1, '#e8c060'); px(x + 14, y + 12, 5, 1, '#e8c060');
+}
+function fRedTable(x, y) {
+  outlineRect(x, y, 48, 32, '#b04040'); px(x + 2, y + 2, 44, 28, '#c85050'); px(x + 4, y + 4, 40, 4, '#d86868');
+  px(x + 14, y + 10, 18, 12, '#e8dcb8'); px(x + 18, y + 13, 5, 4, '#c8e8f0'); px(x + 26, y + 13, 5, 4, '#f0a030');
+  fCushion(x - 20, y + 10); fCushion(x + 54, y + 10); fCushion(x + 16, y - 14); fCushion(x + 16, y + 38);
+}
+function fHearth(x, y) {
+  outlineRect(x, y, 36, 28, '#c04858'); px(x + 2, y + 2, 32, 24, '#d86878');
+  outlineRect(x + 6, y + 6, 24, 14, '#e8dcb8'); px(x + 8, y + 8, 20, 3, '#f4ecd0');
+  px(x + 12, y + 11, 7, 6, '#f0a030'); px(x + 14, y + 10, 2, 2, '#4a7a3a'); px(x + 22, y + 12, 5, 4, '#c8e8f0');
+  fCushion(x - 18, y + 8); fCushion(x + 42, y + 8);
+}
+function fCushion(x, y) { outlineRect(x, y, 12, 9, '#9060a8'); px(x + 1, y + 1, 10, 3, '#a878c0'); }
+// デスク島（2列×3席＝6席・小物つき）
+function fIsland(x, y, c) {
+  g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x - 2, y + 40, 98, 5);
+  outlineRect(x, y, 94, 40, c);
+  px(x, y, 94, 3, shade(c, 25)); px(x, y + 38, 94, 2, shade(c, -35));
+  px(x, y + 19, 94, 2, shade(c, -35));
+  for (let i = 1; i < 3; i++) { px(x + i * 31, y, 1, 19, shade(c, -25)); px(x + i * 31, y + 21, 1, 19, shade(c, -25)); }
+  const clutter = ['mug', 'plant', 'cake', 'books'];
+  for (let row = 0; row < 2; row++) {
+    const ry = y + 2 + row * 21;
+    for (let i = 0; i < 3; i++) {
+      const dx = x + 2 + i * 31;
+      outlineRect(dx + 2, ry + 1, 12, 8, '#2a2a32'); px(dx + 3, ry + 2, 10, 5, '#9adcf0'); px(dx + 3, ry + 2, 10, 2, '#c8ecf8');
+      px(dx + 16, ry + 6, 8, 4, '#e8e8e8'); px(dx + 17, ry + 7, 6, 2, '#d0d0d0');
+      const cl = clutter[(i + row * 2) % 4];
+      if (cl === 'mug') { px(dx + 25, ry + 2, 4, 5, '#f0f0f0'); px(dx + 26, ry + 3, 2, 2, '#8a5a2a'); }
+      else if (cl === 'plant') { px(dx + 25, ry + 4, 4, 4, '#a86a3a'); px(dx + 25, ry + 1, 4, 3, '#58a858'); }
+      else if (cl === 'cake') { px(dx + 25, ry + 3, 5, 4, '#f0c0d0'); px(dx + 25, ry + 2, 5, 1, '#f8f0f0'); px(dx + 27, ry + 1, 1, 1, '#e04848'); }
+      else { px(dx + 25, ry + 5, 5, 2, '#c05858'); px(dx + 25, ry + 3, 5, 2, '#5878c0'); px(dx + 25, ry + 1, 5, 2, '#58a058'); }
+    }
+  }
+  for (let i = 0; i < 3; i++) { fChair(x + 10 + i * 31, y - 9); fChair(x + 10 + i * 31, y + 44); }
+}
+function fChair(x, y) { outlineRect(x, y, 10, 7, '#3a3a44'); px(x + 1, y + 1, 8, 3, '#5a5a68'); }
+function fVending(x, y) {
+  outlineRect(x, y, 16, 26, '#d84848'); px(x + 2, y + 2, 12, 12, '#f0f0f0');
+  for (let i = 0; i < 3; i++) px(x + 3 + i * 4, y + 4, 3, 4, ['#e8a030', '#4a90c8', '#8ac88a'][i]);
+  px(x + 2, y + 17, 8, 5, '#333');
+}
+function fCatTower(x, y) {
+  px(x + 6, y + 10, 3, 14, '#c8b090'); outlineRect(x + 2, y + 4, 12, 6, '#a89070');
+  outlineRect(x + 4, y - 4, 8, 5, '#a89070');
+  px(x + 5, y - 7, 6, 4, '#e8a860'); px(x + 5, y - 9, 2, 2, '#e8a860'); px(x + 9, y - 9, 2, 2, '#e8a860');
+  px(x + 6, y - 6, 1, 1, '#222'); px(x + 9, y - 6, 1, 1, '#222');
+}
+function fWboard(x, y) {
+  outlineRect(x, y, 48, 12, '#e8e8e8'); px(x + 2, y + 2, 44, 8, '#f8f8f8');
+  px(x + 5, y + 4, 16, 2, '#8ab2e0'); px(x + 5, y + 8, 24, 1, '#c0c8d8');
+}
+function fMtable(x, y) {
+  outlineRect(x, y, 64, 26, '#e8e4dc'); px(x + 2, y + 2, 60, 6, '#f8f4ec');
+  fChair(x + 6, y - 9); fChair(x + 28, y - 9); fChair(x + 50, y - 9);
+  fChair(x + 6, y + 31); fChair(x + 28, y + 31); fChair(x + 50, y + 31);
+  fChair(x - 10, y + 7); fChair(x + 70, y + 7);
+}
+function fReadDesk(x, y) {
+  outlineRect(x, y, 52, 10, '#c8a878'); px(x + 2, y + 2, 48, 3, '#d8b888');
+  px(x + 8, y + 4, 9, 4, '#9adcf0'); px(x + 30, y + 4, 9, 4, '#9adcf0');
+  fChair(x + 6, y + 16); fChair(x + 32, y + 16);
+}
+function fBench(x, y) { outlineRect(x, y, 22, 7, '#a8784a'); px(x + 2, y + 1, 18, 3, '#c09060'); }
+
+// ================= 家具マスタ（基礎の間取り・全部動かせる） =================
+// bw/bh=当たり判定(0なら通り抜け可)、hw/hh=つまむ用の当たり(省略時はbw/bh)
+const FURN_TYPES = {
+  piano: { d: fPiano, bw: 30, bh: 16 }, bar: { d: fBar, bw: 110, bh: 14 },
+  cafeT: { d: fCafeTable, bw: 12, bh: 9 }, booth: { d: fBooth, bw: 22, bh: 26 },
+  podDesk: { d: fPodDesk, bw: 40, bh: 14 }, palm: { d: fPalm, bw: 10, bh: 14 },
+  tv: { d: fTv, bw: 30, bh: 14 }, shelf: { d: fShelf, bw: 24, bh: 18 }, board: { d: fBoard, bw: 34, bh: 14 },
+  plant: { d: fPlant, bw: 10, bh: 12 }, sofaSet: { d: fSofaSet, bw: 48, bh: 33 },
+  thSofaV: { d: fThSofaV, bw: 12, bh: 50 }, thSofaH: { d: fThSofaH, bw: 72, bh: 12 },
+  thRug: { d: fThRug, bw: 0, bh: 0, hw: 68, hh: 30 }, thTable: { d: fThTable, bw: 20, bh: 10 },
+  popcorn: { d: fPopcorn, bw: 14, bh: 20 }, tansu: { d: fTansu, bw: 36, bh: 18 },
+  redTable: { d: fRedTable, bw: 48, bh: 32 }, hearth: { d: fHearth, bw: 36, bh: 28 },
+  island: { d: fIsland, bw: 94, bh: 40 }, catTower: { d: fCatTower, bw: 16, bh: 20 },
+  vending: { d: fVending, bw: 16, bh: 26 }, wboard: { d: fWboard, bw: 48, bh: 12 },
+  mtable: { d: fMtable, bw: 64, bh: 26 }, readDesk: { d: fReadDesk, bw: 52, bh: 10 },
+  bench: { d: fBench, bw: 22, bh: 7 }, cushion: { d: fCushion, bw: 0, bh: 0, hw: 12, hh: 9 },
+};
+const FURN_DEFAULT = [
+  { id: 'piano', t: 'piano', x: 12, y: 34 }, { id: 'bar', t: 'bar', x: 48, y: 38 },
+  { id: 'cafeT1', t: 'cafeT', x: 42, y: 82, c: '#7ab2e0' }, { id: 'cafeT2', t: 'cafeT', x: 112, y: 82, c: '#e8c85a' },
+  { id: 'cafeT3', t: 'cafeT', x: 18, y: 114, c: '#8ac88a' }, { id: 'cafeT4', t: 'cafeT', x: 78, y: 114, c: '#e08a9a' },
+  { id: 'booth1', t: 'booth', x: 30, y: 152 }, { id: 'booth2', t: 'booth', x: 100, y: 152 }, { id: 'booth3', t: 'booth', x: 160, y: 152 },
+  { id: 'pod1', t: 'podDesk', x: 218, y: 26 }, { id: 'pod2', t: 'podDesk', x: 274, y: 26 },
+  { id: 'tv', t: 'tv', x: 338, y: 24 }, { id: 'shelfA', t: 'shelf', x: 378, y: 22 }, { id: 'shelfB', t: 'shelf', x: 406, y: 22 },
+  { id: 'board', t: 'board', x: 444, y: 24 }, { id: 'plantL', t: 'plant', x: 490, y: 24 },
+  { id: 'sofaG', t: 'sofaSet', x: 348, y: 50, c: '#88b858' }, { id: 'sofaY', t: 'sofaSet', x: 438, y: 50, c: '#e8b040' },
+  { id: 'sofaR', t: 'sofaSet', x: 348, y: 94, c: '#d86878' }, { id: 'sofaB', t: 'sofaSet', x: 438, y: 94, c: '#6890d8' },
+  { id: 'thRug', t: 'thRug', x: 546, y: 121 },
+  { id: 'thSofaV', t: 'thSofaV', x: 532, y: 80 }, { id: 'thSofaH', t: 'thSofaH', x: 540, y: 100 },
+  { id: 'thTable', t: 'thTable', x: 566, y: 128 }, { id: 'popcorn', t: 'popcorn', x: 610, y: 66 },
+  { id: 'tansu', t: 'tansu', x: 150, y: 206 }, { id: 'redTable', t: 'redTable', x: 40, y: 230 },
+  { id: 'hearth', t: 'hearth', x: 124, y: 272 },
+  { id: 'island1', t: 'island', x: 242, y: 170, c: '#b08050' }, { id: 'island2', t: 'island', x: 392, y: 170, c: '#b08050' },
+  { id: 'island3', t: 'island', x: 242, y: 300, c: '#c8a878' }, { id: 'island4', t: 'island', x: 392, y: 300, c: '#c8a878' },
+  { id: 'catTower', t: 'catTower', x: 216, y: 140 },
+  { id: 'vend1', t: 'vending', x: 496, y: 236 }, { id: 'vend2', t: 'vending', x: 496, y: 266 },
+  { id: 'bench', t: 'bench', x: 28, y: 352 },
+  { id: 'plant1', t: 'plant', x: 206, y: 122 }, { id: 'plant2', t: 'plant', x: 508, y: 420 },
+];
+let layout = {};              // Firebase上書き: id -> {x,y}
+let dragFurnId = null;        // ドラッグ中の家具（静的キャンバスから除いて手前描画）
+function furnPos(f) { const o = layout[f.id]; return o ? { x: o.x, y: o.y } : { x: f.x, y: f.y }; }
+
+// ================= 障害物（家具から動的に計算） =================
+let OBST = [];
+function rebuildObstacles() {
+  OBST = [[8, 392, 66, 20], [102, 392, 98, 20]];   // 川（橋x76〜100は通れる）
+  for (const f of FURN_DEFAULT) {
+    const t = FURN_TYPES[f.t];
+    if (!t.bw) continue;
+    const p = furnPos(f);
+    OBST.push([p.x, p.y, t.bw, t.bh]);
+  }
+}
+function blockedAt(x, y) {
+  for (const r of OBST) if (x > r[0] && x < r[0] + r[2] && y > r[1] && y < r[1] + r[3]) return true;
+  return false;
+}
+function tryMove(p, nx, ny) {
+  if (blockedAt(p.x, p.y)) { p.x = nx; p.y = ny; return true; }  // 家具の下敷きになったら脱出可能
+  if (!blockedAt(nx, ny)) { p.x = nx; p.y = ny; return true; }
+  if (!blockedAt(nx, p.y)) { p.x = nx; return true; }
+  if (!blockedAt(p.x, ny)) { p.y = ny; return true; }
+  return false;
+}
+
+// ================= 部屋の背景（床・壁・川など固定部分＋家具） =================
+const room = document.createElement('canvas');
+room.width = W * S; room.height = H * S;
+function buildRoom() {
+  g = room.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, room.width, room.height);
+  g.save(); g.scale(S, S);
+  // 石畳
+  for (let y = 0; y < H; y += 8) for (let x = -8; x < W; x += 16) {
+    const off = (y / 8) % 2 ? 8 : 0;
+    px(x + off, y, 16, 8, (Math.floor(x / 16) + y / 8) % 2 ? '#b0aab8' : '#a6a0ae');
+    px(x + off, y + 7, 16, 1, '#928c9e');
+  }
+  // 外壁と窓
+  px(0, 0, W, 14, '#7a687e'); px(0, 14, W, 4, '#584a5e'); px(0, 18, W, 2, 'rgba(0,0,0,.15)');
+  for (let i = 0; i < 7; i++) {
+    px(30 + i * 88, 2, 26, 10, O); px(31 + i * 88, 3, 24, 8, '#9adcf0');
+    px(31 + i * 88, 3, 24, 3, '#c8ecf8'); px(42 + i * 88, 3, 2, 8, O);
+  }
+  // カフェ床（パーケット＋レンガ）
+  for (let y = 20; y < 192; y += 6) for (let x = 6; x < 202; x += 6)
+    px(x, y, 6, 6, (x / 6 + y / 6) % 2 ? '#d2b488' : '#c8aa7e');
+  for (let x = 6; x < 202; x += 12) { px(x, 20, 11, 5, '#a0522d'); px(x + 6, 25, 11, 5, '#a0522d'); px(x, 25, 5, 5, '#8b4226'); }
+  // ポッド床
+  for (const bx of [212, 268]) {
+    px(bx, 20, 52, 60, '#565662');
+    for (let y = 20; y < 80; y += 6) for (let x = bx; x < bx + 52; x += 6)
+      if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.04)');
+    px(bx, 20, 1, 60, '#3c3c46'); px(bx + 51, 20, 1, 60, '#3c3c46');
+  }
+  // ラウンジ床
+  px(330, 20, 190, 132, '#e8d090');
+  for (let y = 22; y < 152; y += 8) px(330, y, 190, 1, 'rgba(0,0,0,.04)');
+  // シアター床＋大画面（7th上映中・会議室ぶん拡張して大きなシアターに）
+  px(526, 20, 106, 220, '#2c2838');
+  for (let y = 20; y < 240; y += 6) for (let x = 526; x < 632; x += 6)
+    if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.03)');
+  outlineRect(532, 24, 92, 44, '#101018');
+  px(534, 26, 88, 40, '#181828'); px(536, 28, 84, 3, 'rgba(255,255,255,.06)');
+  g.font = 'bold 26px sans-serif'; g.textAlign = 'center';
+  g.fillStyle = '#6a58c8'; g.fillText('7th', 579, 55);
+  g.fillStyle = '#f0eaff'; g.fillText('7th', 578, 54);
+  g.textAlign = 'left';
+  px(540, 32, 3, 3, '#f8e880'); px(612, 56, 3, 3, '#f8e880'); px(600, 34, 2, 2, '#a8c8f8');
+  px(534, 62, 88, 3, 'rgba(255,200,120,.15)');
+  // 和室床
+  px(8, 200, 194, 132, '#a8c088');
+  for (let ty = 200; ty < 332; ty += 33) for (let tx = 8; tx < 202; tx += 97) {
+    px(tx, ty, 97, 33, ((tx + ty) / 33) % 2 ? '#a8c088' : '#9cb47c');
+    g.strokeStyle = '#7e985e'; g.lineWidth = 1; g.strokeRect(tx + .5, ty + .5, 97, 33);
+  }
+  px(8, 200, 194, 2, '#8a6238'); px(8, 330, 194, 2, '#8a6238');
+  // もくもくエリア床（会議室・図書室ぶん右下へ拡張）
+  px(206, 116, 314, 128, '#d8d4dc');
+  px(206, 244, 426, 188, '#d8d4dc');
+  for (let y = 116; y < 432; y += 10) px(206, y, y < 244 ? 314 : 426, 1, 'rgba(0,0,0,.05)');
+  px(206, 116, 1, 316, '#b8b2c0');
+  px(330, 416, 52, 6, '#4868b0'); px(332, 417, 48, 4, '#5878c0');
+  // 「とにかくやれ」フロアペイント（右端の空きスペース）
+  g.save();
+  g.font = 'bold 26px "Hiragino Maru Gothic ProN", sans-serif'; g.textAlign = 'center';
+  g.fillStyle = 'rgba(180,64,64,.22)'; g.fillRect(530, 262, 98, 88);
+  g.fillStyle = 'rgba(150,40,40,.85)';
+  g.fillText('とにかく', 579, 300);
+  g.fillText('や れ', 579, 336);
+  g.restore();
+  // おそと
+  px(8, 340, 194, 92, '#88b868');
+  for (let i = 0; i < 60; i++) {
+    const gx = 10 + (i * 37) % 190, gy = 342 + (i * 23) % 88;
+    px(gx, gy, 2, 2, i % 3 ? '#78a858' : '#98c878');
+  }
+  px(120, 340, 14, 52, '#d8cca8'); px(122, 342, 10, 48, '#e0d4b0');
+  px(8, 392, 194, 20, '#5890d8'); px(8, 392, 194, 3, '#78a8e8');
+  for (let i = 0; i < 13; i++) px(14 + i * 15, 398 + (i % 3), 6, 1, '#a8c8f0');
+  px(76, 388, 24, 26, '#a8784a'); px(76, 388, 24, 2, O); px(76, 412, 24, 2, O);
+  for (let i = 0; i < 5; i++) px(78 + i * 5, 390, 2, 22, '#c09060');
+  for (const [fx, fy] of [[16, 348], [34, 366], [166, 350], [186, 364], [20, 424], [180, 422], [60, 374], [148, 376]]) {
+    px(fx, fy, 3, 3, ['#f07890', '#f0d048', '#f0f0f0'][fx % 3]); px(fx + 1, fy + 1, 1, 1, '#f8e880');
+  }
+  // 家具（y順・ドラッグ中のものは除く）
+  const sorted = [...FURN_DEFAULT].sort((a, b) => (furnPos(a).y + (FURN_TYPES[a.t].bh || 0)) - (furnPos(b).y + (FURN_TYPES[b.t].bh || 0)));
+  for (const f of sorted) {
+    if (f.id === dragFurnId) continue;
+    const p = furnPos(f);
+    FURN_TYPES[f.t].d(p.x, p.y, f.c);
+  }
+  g.restore();
+}
+
+// ================= デコアイテム =================
+const DECO_ITEMS = [
+  ['🌿 観葉植物', (x, y) => fPlant(x - 5, y - 11)],
+  ['🌸 お花', (x, y) => {
+    px(x - 5, y - 3, 10, 3, '#78a858');
+    for (const [fx, fc] of [[-4, '#f07890'], [0, '#f0d048'], [3, '#f0f0f0']]) {
+      px(x + fx, y - 7, 3, 3, fc); px(x + fx + 1, y - 6, 1, 1, '#f8e880');
+    }
+  }],
+  ['🟣 クッション', (x, y) => fCushion(x - 6, y - 7)],
+  ['🔵 ラグ', (x, y) => {
+    g.fillStyle = '#6890d8'; g.beginPath(); g.ellipse(x, y, 14, 7, 0, 0, 7); g.fill();
+    g.fillStyle = '#88a8e0'; g.beginPath(); g.ellipse(x, y, 9, 4.5, 0, 0, 7); g.fill();
+  }],
+  ['🐱 ねこ', (x, y) => {
+    px(x - 4, y - 5, 8, 5, '#e8a860'); px(x - 4, y - 8, 4, 4, '#e8a860');
+    px(x - 4, y - 9, 1.5, 2, '#e8a860'); px(x - 1.5, y - 9, 1.5, 2, '#e8a860');
+    px(x - 3, y - 7, 1, 1, '#222'); px(x - 1, y - 7, 1, 1, '#222');
+    px(x + 4, y - 7, 2, 5, '#e8a860');
+  }],
+  ['📚 本棚', (x, y) => fShelf(x - 12, y - 17)],
+  ['💡 ランプ', (x, y) => {
+    g.fillStyle = 'rgba(255,230,140,.3)'; g.beginPath(); g.arc(x, y - 14, 8, 0, 7); g.fill();
+    px(x - 1, y - 12, 2, 12, '#5a5a68'); px(x - 3, y - 1, 6, 2, '#5a5a68');
+    px(x - 4, y - 17, 8, 6, '#f0d048'); px(x - 5, y - 12, 10, 1, '#e8b45a');
+  }],
+  ['🍰 ケーキ台', (x, y) => {
+    outlineRect(x - 6, y - 7, 12, 8, '#e8e0d0'); px(x - 6, y - 7, 12, 3, '#f4eee0');
+    px(x - 3, y - 11, 6, 4, '#f0c0d0'); px(x - 3, y - 12, 6, 1, '#f8f0f0'); px(x - 1, y - 13, 1, 1, '#e04848');
+  }],
+  ['🌵 サボテン', (x, y) => {
+    px(x - 4, y - 4, 8, 5, '#b06a3a'); px(x - 2, y - 14, 4, 10, '#48a048');
+    px(x - 5, y - 11, 3, 2, '#48a048'); px(x - 5, y - 13, 2, 3, '#48a048');
+    px(x + 2, y - 9, 3, 2, '#48a048'); px(x + 3, y - 11, 2, 3, '#48a048');
+    px(x - 1, y - 16, 2, 2, '#f07890');
+  }],
+  ['🧸 くま', (x, y) => {
+    px(x - 3, y - 6, 6, 6, '#a8764a'); px(x - 4, y - 11, 8, 6, '#a8764a');
+    px(x - 5, y - 12, 2, 2, '#a8764a'); px(x + 3, y - 12, 2, 2, '#a8764a');
+    px(x - 2, y - 9, 1, 1, '#222'); px(x + 1, y - 9, 1, 1, '#222'); px(x - .5, y - 8, 1, 1, '#5a3a1e');
+    px(x - 5, y - 5, 2, 3, '#a8764a'); px(x + 3, y - 5, 2, 3, '#a8764a');
+  }],
+];
+const decos = {};
+let decoMode = false, decoSel = 0, decoDel = false;
+
+// ================= アバター描画（0.5px整数格子・4方向・エモート） =================
+function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
+  dir = dir || 'down';
+  const dance = emote === 'dance', ssj = emote === 'ssj';
+  if (dance) dir = ['down', 'right', 'up', 'left'][frame % 4];
+  const bob = dance ? (frame % 2) * 1.5 : moving ? (frame % 2) : 0;
+  const hc0 = HAIR_COLORS[(av.hc || 0) % HAIR_COLORS.length];
+  const hc = ssj ? '#f8dc38' : hc0;
+  const sc = SHIRT_COLORS[(av.sc || 0) % SHIRT_COLORS.length];
+  const pc = PANTS_COLORS[(av.pc || 0) % PANTS_COLORS.length];
+  const hs = ssj ? 2 : (av.hs || 0) % HAIR_STYLES.length;
+  const ac = ssj ? 0 : (av.ac || 0) % ACCS.length;
+  const side = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+  const s = side;
+  g = c2;
+  c2.fillStyle = 'rgba(0,0,0,.25)'; c2.beginPath(); c2.ellipse(lx, ly + 1, 6, 2.4, 0, 0, 7); c2.fill();
+  if (ssj) {
+    const gl = c2.createRadialGradient(lx, ly - 12, 2, lx, ly - 12, 16);
+    gl.addColorStop(0, 'rgba(255,230,80,.55)'); gl.addColorStop(1, 'rgba(255,230,80,0)');
+    c2.fillStyle = gl; c2.beginPath(); c2.ellipse(lx, ly - 12, 14, 18, 0, 0, 7); c2.fill();
+  }
+  c2.save(); c2.scale(.5, .5);
+  const X = Math.round(lx * 2), B = Math.round((ly - bob) * 2);
+  const e1 = moving && !dance ? (frame % 2 ? 2 : 0) : 0;
+  const e2 = moving && !dance ? (frame % 2 ? 0 : 2) : 0;
+  px(X - 7, B - 14, 6, 14 - e1, O); px(X + 1, B - 14, 6, 14 - e2, O);
+  px(X - 6, B - 14, 4, 12 - e1, pc); px(X + 2, B - 14, 4, 12 - e2, pc);
+  px(X - 10, B - 32, 20, 20, O); px(X - 8, B - 30, 16, 16, sc); px(X - 8, B - 30, 16, 4, shade(sc, 35));
+  if (dance && s === 0) {
+    px(X - 13, B - 40, 4, 12, O); px(X + 9, B - 40, 4, 12, O);
+    px(X - 12, B - 39, 3, 10, sc); px(X + 10, B - 39, 3, 10, sc);
+  } else if (s === 0) {
+    px(X - 12, B - 28, 4, 12, O); px(X + 8, B - 28, 4, 12, O);
+    px(X - 11, B - 27, 3, 10, sc); px(X + 9, B - 27, 3, 10, sc);
+  } else {
+    px(X + s * 6 - 2, B - 28, 5, 12, O); px(X + s * 6 - 1, B - 27, 3, 10, sc);
+  }
+  px(X - 9, B - 50, 18, 18, O);
+  if (dir === 'up') {
+    px(X - 8, B - 49, 16, 16, hc); px(X - 8, B - 49, 16, 4, shade(hc, 25));
+  } else {
+    px(X - 8, B - 49, 16, 16, '#f6d0a8');
+    if (s === 0) {
+      px(X - 5, B - 43, 3, 4, '#2a2020'); px(X + 2, B - 43, 3, 4, '#2a2020');
+      px(X - 7, B - 39, 3, 2, '#f0a8a0'); px(X + 4, B - 39, 3, 2, '#f0a8a0');
+      px(X - 1, B - 38, 2, 2, '#c07060');
+    } else {
+      px(X + s * 4 - 1, B - 43, 3, 4, '#2a2020');
+      px(X + s * 1 - 1, B - 39, 3, 2, '#f0a8a0');
+      px(X + s * 7 - 1, B - 41, 2, 2, '#e0b088');
+      px(X - s * 8 - (s > 0 ? -2 : 2) - 3, B - 48, 6, 14, hc);
+    }
+  }
+  px(X - 10, B - 52, 20, 7, O);
+  px(X - 9, B - 51, 18, 5, dir === 'up' ? shade(hc, 15) : hc);
+  if (hs === 0) {
+    px(X - 12, B - 50, 4, 18, O); px(X + 8, B - 50, 4, 18, O);
+    px(X - 11, B - 49, 3, 16, hc); px(X + 9, B - 49, 3, 16, hc);
+    px(X - 11, B - 35, 4, 3, O); px(X + 7, B - 35, 4, 3, O);
+    px(X - 10, B - 35, 3, 2, hc); px(X + 8, B - 35, 3, 2, hc);
+    if (dir === 'up') { px(X - 9, B - 49, 18, 14, hc); px(X - 9, B - 49, 18, 3, shade(hc, 25)); }
+  } else {
+    px(X - 10, B - 48, 3, 8, O); px(X + 7, B - 48, 3, 8, O);
+    px(X - 9, B - 48, 2, 7, hc); px(X + 7, B - 48, 2, 7, hc);
+  }
+  if (hs === 1) {
+    const bx = dir === 'up' ? 0 : -s * 2;
+    px(X - 12 + bx, B - 48, 4, 20, O); px(X + 8 + bx, B - 48, 4, 20, O);
+    px(X - 11 + bx, B - 47, 3, 18, hc); px(X + 9 + bx, B - 47, 2, 18, hc);
+  } else if (hs === 2 && ac === 0) {
+    const t = ssj ? 3 : 0;
+    px(X - 8, B - 56 - t, 4, 6 + t, O); px(X - 2, B - 58 - t, 4, 8 + t, O); px(X + 4, B - 56 - t, 4, 6 + t, O);
+    px(X - 7, B - 55 - t, 3, 5 + t, hc); px(X - 1, B - 57 - t, 3, 7 + t, hc); px(X + 5, B - 55 - t, 3, 5 + t, hc);
+  } else if (hs === 3 && ac === 0) {
+    px(X - 4, B - 59, 8, 8, O); px(X - 3, B - 58, 6, 6, hc);
+    px(X - 1, B - 61, 2, 3, '#e05a80');
+  }
+  if (ac === 1) {
+    catEar(X - 8, B - 51, -1, hc); catEar(X + 8, B - 51, 1, hc);
+  } else if (ac === 2) {
+    px(X - 7, B - 66, 5, 16, O); px(X + 2, B - 66, 5, 16, O);
+    px(X - 6, B - 65, 3, 14, '#f4f0ea'); px(X + 3, B - 65, 3, 14, '#f4f0ea');
+    px(X - 5, B - 62, 1, 10, '#f0b8c0'); px(X + 4, B - 62, 1, 10, '#f0b8c0');
+  } else if (ac === 3) {
+    fcirc(X - 8, B - 53, 5, O); fcirc(X + 8, B - 53, 5, O);
+    fcirc(X - 8, B - 53, 3, '#9a6a3a'); fcirc(X + 8, B - 53, 3, '#9a6a3a');
+    fcirc(X - 8, B - 53, 2, '#c89a60'); fcirc(X + 8, B - 53, 2, '#c89a60');
+  } else if (ac === 4) {
+    px(X - 14, B - 53, 28, 5, O); px(X - 13, B - 52, 26, 3, '#e8cc70');
+    px(X - 9, B - 60, 18, 9, O); px(X - 8, B - 59, 16, 7, '#e8cc70');
+    px(X - 8, B - 54, 16, 2, '#d05858');
+  } else if (ac === 5) {
+    px(X - 10, B - 57, 20, 7, O); px(X - 9, B - 56, 18, 5, '#4878c8');
+    if (dir !== 'up') { px(X - 11 + s * 6, B - 51, 12 + Math.abs(s) * 4, 3, O); px(X - 10 + s * 6, B - 50, 10 + Math.abs(s) * 4, 2, '#3868b8'); }
+  } else if (ac === 6) {
+    px(X - 11, B - 54, 22, 10, O); px(X - 10, B - 53, 20, 8, '#78c060');
+    px(X - 11, B - 46, 4, 12, O); px(X + 7, B - 46, 4, 12, O);
+    px(X - 10, B - 45, 2, 10, '#78c060'); px(X + 8, B - 45, 2, 10, '#78c060');
+    fcirc(X - 5, B - 55, 4, O); fcirc(X + 5, B - 55, 4, O);
+    fcirc(X - 5, B - 55, 3, '#f0f0e8'); fcirc(X + 5, B - 55, 3, '#f0f0e8');
+    px(X - 6, B - 56, 2, 2, '#222'); px(X + 4, B - 56, 2, 2, '#222');
+  }
+  if (ssj && frame % 2) {
+    px(X - 14, B - 40, 2, 6, '#fff8a0'); px(X + 12, B - 46, 2, 6, '#fff8a0');
+    px(X - 12, B - 56, 2, 4, '#fff8a0'); px(X + 10, B - 30, 2, 4, '#fff8a0');
+  }
+  c2.restore();
+  function catEar(x, y, sgn, col) {
+    g.fillStyle = O; g.beginPath(); g.moveTo(x - 4 * sgn, y); g.lineTo(x + 3 * sgn, y); g.lineTo(x, y - 8); g.closePath(); g.fill();
+    g.fillStyle = col; g.beginPath(); g.moveTo(x - 2.5 * sgn, y - 1); g.lineTo(x + 1.5 * sgn, y - 1); g.lineTo(x, y - 6.5); g.closePath(); g.fill();
+    g.fillStyle = '#f0a8b0'; g.beginPath(); g.moveTo(x - 1.2 * sgn, y - 2); g.lineTo(x + .6 * sgn, y - 2); g.lineTo(x, y - 4.6); g.closePath(); g.fill();
+  }
+  function fcirc(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+}
+
+// ================= 状態 =================
+let me = null;
+const others = {};
+const bubbles = {};
+let db = null, myRef = null, fbReady = false;
+
+// ================= Discord通知 =================
+function notifyDiscord(text) {
+  if (!window.DISCORD_WEBHOOK_URL) return;
+  fetch(window.DISCORD_WEBHOOK_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: text }),
+  }).catch(() => {});
+}
+
+// ================= Firebase =================
+function connect() {
+  if (!fbReady) { firebase.initializeApp(window.FIREBASE_CONFIG); db = firebase.database(); fbReady = true; }
+  myRef = db.ref('rooms/main/players/' + me.id);
+  const push = () => myRef.set({ name: me.name, hs: me.hs, hc: me.hc, sc: me.sc, pc: me.pc, ac: me.ac,
+    st: me.st, d: me.dir, em: me.em || '', emu: me.emu || 0,
+    x: Math.round(me.x), y: Math.round(me.y), tx: Math.round(me.tx), ty: Math.round(me.ty),
+    ts: firebase.database.ServerValue.TIMESTAMP });
+  myRef.onDisconnect().remove();
+  push(); me.push = push;
+
+  if (connect.subscribed) return;
+  connect.subscribed = true;
+  db.ref('rooms/main/players').on('value', snap => {
+    const data = snap.val() || {};
+    for (const id of Object.keys(others)) if (!data[id]) delete others[id];
+    let n = 0;
+    for (const [id, p] of Object.entries(data)) {
+      n++;
+      if (me && id === me.id) continue;
+      if (!others[id]) others[id] = { id, x: p.x, y: p.y };
+      Object.assign(others[id], { name: p.name, hs: p.hs || 0, hc: p.hc || 0, sc: p.sc || 0, pc: p.pc || 0,
+        ac: p.ac || 0, st: p.st || 'work', dir: p.d || 'down', em: p.em || '', emu: p.emu || 0, tx: p.tx, ty: p.ty });
+      if (Math.hypot(others[id].x - p.x, others[id].y - p.y) > 80) { others[id].x = p.x; others[id].y = p.y; }
+    }
+    document.getElementById('online').textContent = me ? `🟢 いま ${n} 人がオンライン` : `部屋には ${n} 人います`;
+  });
+  db.ref('rooms/main/chat').limitToLast(40).on('child_added', snap => {
+    const m = snap.val(); if (!m) return;
+    addLog(m.n, m.t);
+    if (Date.now() - (m.ts || 0) < 15000 && m.pid) bubbles[m.pid] = { text: m.t, until: Date.now() + 7000 };
+  });
+  db.ref('rooms/main/deco').on('child_added', snap => { decos[snap.key] = snap.val(); });
+  db.ref('rooms/main/deco').on('child_removed', snap => { delete decos[snap.key]; });
+  db.ref('rooms/main/layout').on('value', snap => {
+    layout = snap.val() || {};
+    rebuildObstacles(); buildRoom();
+  });
+  watchScreen();
+}
+function addLog(n, t) {
+  const log = document.getElementById('log');
+  const div = document.createElement('div');
+  const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = n + '：';
+  const tx = document.createElement('span'); tx.className = 't'; tx.textContent = t;
+  div.appendChild(nm); div.appendChild(tx);
+  log.appendChild(div); log.scrollTop = log.scrollHeight;
+  while (log.children.length > 80) log.removeChild(log.firstChild);
+}
+
+// ================= 画面共有（WebRTC・P2P） =================
+const RTC_CONF = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+let shareStream = null;
+const senderPeers = {};
+let viewerPc = null;
+let currentShareOwner = null;
+
+async function startShare() {
+  if (!me || !db) return;
+  try {
+    shareStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 12 }, audio: false });
+  } catch (e) { return; }
+  const sRef = db.ref('rooms/main/screen');
+  await db.ref('rooms/main/rtc').remove();
+  sRef.set({ owner: me.id, name: me.name, ts: firebase.database.ServerValue.TIMESTAMP });
+  sRef.onDisconnect().remove();
+  db.ref('rooms/main/rtc').on('child_added', onViewerJoin);
+  shareStream.getVideoTracks()[0].onended = stopShare;
+  document.getElementById('shareBtn').classList.add('sharing');
+  document.getElementById('shareBtn').textContent = '⏹ 共有を停止';
+  notifyDiscord(`🖥 ${me.name}さんがメタ部屋で画面共有を始めました`);
+}
+function onViewerJoin(snap) {
+  const vid = snap.key;
+  if (!shareStream || senderPeers[vid]) return;
+  const ref = snap.ref;
+  const pc = new RTCPeerConnection(RTC_CONF);
+  senderPeers[vid] = pc;
+  shareStream.getTracks().forEach(t => pc.addTrack(t, shareStream));
+  pc.onicecandidate = e => { if (e.candidate) ref.child('sc').push(JSON.stringify(e.candidate)); };
+  const handleOffer = async (offJson) => {
+    if (!offJson || pc.currentRemoteDescription) return;
+    await pc.setRemoteDescription(JSON.parse(offJson));
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    ref.child('answer').set(JSON.stringify(pc.localDescription));
+  };
+  ref.child('offer').on('value', sv => handleOffer(sv.val()));
+  ref.child('vc').on('child_added', sv => { try { pc.addIceCandidate(JSON.parse(sv.val())); } catch (e) {} });
+}
+function stopShare() {
+  if (shareStream) { shareStream.getTracks().forEach(t => t.stop()); shareStream = null; }
+  for (const pc of Object.values(senderPeers)) pc.close();
+  for (const k of Object.keys(senderPeers)) delete senderPeers[k];
+  if (db) { db.ref('rooms/main/rtc').off('child_added', onViewerJoin); db.ref('rooms/main/screen').remove(); db.ref('rooms/main/rtc').remove(); }
+  document.getElementById('shareBtn').classList.remove('sharing');
+  document.getElementById('shareBtn').textContent = '🖥 画面共有';
+}
+function watchScreen() {
+  db.ref('rooms/main/screen').on('value', snap => {
+    const sc = snap.val();
+    const pane = document.getElementById('sharePane');
+    if (sc && me && sc.owner !== me.id) {
+      if (currentShareOwner !== sc.owner) { teardownViewer(); currentShareOwner = sc.owner; startViewing(sc); }
+      document.getElementById('shareTitle').textContent = `🖥 ${sc.name}さんの画面`;
+      pane.style.display = 'block';
+    } else if (!sc) {
+      teardownViewer(); currentShareOwner = null; pane.style.display = 'none';
+    }
+  });
+}
+async function startViewing(sc) {
+  const ref = db.ref('rooms/main/rtc/' + me.id);
+  await ref.remove();
+  viewerPc = new RTCPeerConnection(RTC_CONF);
+  viewerPc.addTransceiver('video', { direction: 'recvonly' });
+  viewerPc.ontrack = e => { document.getElementById('shareVideo').srcObject = e.streams[0]; };
+  viewerPc.onicecandidate = e => { if (e.candidate) ref.child('vc').push(JSON.stringify(e.candidate)); };
+  ref.child('answer').on('value', sv => {
+    if (sv.val() && viewerPc && !viewerPc.currentRemoteDescription) viewerPc.setRemoteDescription(JSON.parse(sv.val())).catch(() => {});
+  });
+  ref.child('sc').on('child_added', sv => { try { viewerPc.addIceCandidate(JSON.parse(sv.val())); } catch (e) {} });
+  const off = await viewerPc.createOffer();
+  await viewerPc.setLocalDescription(off);
+  ref.child('offer').set(JSON.stringify(viewerPc.localDescription));
+  ref.onDisconnect().remove();
+}
+function teardownViewer() {
+  if (viewerPc) { viewerPc.close(); viewerPc = null; }
+  if (db && me) db.ref('rooms/main/rtc/' + me.id).remove();
+  document.getElementById('shareVideo').srcObject = null;
+}
+document.getElementById('shareBtn').addEventListener('click', () => { shareStream ? stopShare() : startShare(); });
+document.getElementById('shareClose').addEventListener('click', () => { document.getElementById('sharePane').style.display = 'none'; });
+
+// ================= 入力（クリック・十字キー・ダッシュ・デコ&家具ドラッグ） =================
+let drag = null;   // {kind:'deco',key,moved} | {kind:'furn',id,offx,offy}
+function evPos(e) {
+  const r = cv.getBoundingClientRect();
+  return { lx: (e.clientX - r.left) / r.width * W, ly: (e.clientY - r.top) / r.height * H };
+}
+cv.addEventListener('pointerdown', e => {
+  if (!me) return;
+  const { lx, ly } = evPos(e);
+  if (decoMode && db) {
+    cv.setPointerCapture(e.pointerId);
+    // 削除モード: デコのみ削除
+    if (decoDel) {
+      let bestK = null, bestD = 14;
+      for (const [k, d] of Object.entries(decos)) {
+        const dd = Math.hypot(d.x - lx, d.y - ly);
+        if (dd < bestD) { bestD = dd; bestK = k; }
+      }
+      if (bestK) db.ref('rooms/main/deco/' + bestK).remove();
+      return;
+    }
+    // 1) デコをつまむ
+    let bestK = null, bestD = 12;
+    for (const [k, d] of Object.entries(decos)) {
+      const dd = Math.hypot(d.x - lx, d.y - ly);
+      if (dd < bestD) { bestD = dd; bestK = k; }
+    }
+    if (bestK) { drag = { kind: 'deco', key: bestK, moved: false }; return; }
+    // 2) 家具をつまむ（手前=リスト後方から判定）
+    for (let i = FURN_DEFAULT.length - 1; i >= 0; i--) {
+      const f = FURN_DEFAULT[i], t = FURN_TYPES[f.t], p = furnPos(f);
+      const w = t.bw || t.hw || 16, h = t.bh || t.hh || 12;
+      if (lx > p.x - 5 && lx < p.x + w + 5 && ly > p.y - 5 && ly < p.y + h + 5) {
+        drag = { kind: 'furn', id: f.id, offx: lx - p.x, offy: ly - p.y };
+        dragFurnId = f.id; buildRoom();
+        return;
+      }
+    }
+    // 3) 何もない床 → デコ設置
+    db.ref('rooms/main/deco').push({ t: decoSel, x: Math.round(lx), y: Math.round(ly) });
+    return;
+  }
+  me.tx = Math.min(Math.max(lx, 10), W - 10);
+  me.ty = Math.min(Math.max(ly, 30), H - 6);
+  me.push && me.push();
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const { lx, ly } = evPos(e);
+  if (drag.kind === 'deco') {
+    const d = decos[drag.key];
+    if (d) { d.x = Math.round(lx); d.y = Math.round(ly); drag.moved = true; }
+  } else {
+    layout[drag.id] = { x: Math.round(lx - drag.offx), y: Math.round(ly - drag.offy) };
+  }
+});
+cv.addEventListener('pointerup', () => {
+  if (!drag || !db) { drag = null; return; }
+  if (drag.kind === 'deco') {
+    const d = decos[drag.key];
+    if (d && drag.moved) db.ref('rooms/main/deco/' + drag.key).set({ t: d.t, x: d.x, y: d.y });
+  } else {
+    const p = layout[drag.id];
+    if (p) db.ref('rooms/main/layout/' + drag.id).set({ x: p.x, y: p.y });
+    dragFurnId = null; rebuildObstacles(); buildRoom();
+  }
+  drag = null;
+});
+const keys = {};
+const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right',
+  Shift: 'dash', b: 'dash', B: 'dash' };
+let turnHold = 0;
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = KEYMAP[e.key];
+  if (!k) return;
+  if (k !== 'dash' && me && !keys[k] && me.dir !== k) {
+    me.dir = k; turnHold = performance.now() + 140;
+    me.push && me.push();
+  }
+  keys[k] = true;
+  if (k !== 'dash') e.preventDefault();
+});
+window.addEventListener('keyup', e => {
+  const k = KEYMAP[e.key];
+  if (k) { keys[k] = false; if (k !== 'dash' && me) { me.tx = me.x; me.ty = me.y; me.push && me.push(); } }
+});
+let lastKeyPush = 0;
+function keyMove(dt, now) {
+  if (!me) return false;
+  let vx = 0, vy = 0;
+  if (keys.up) vy -= 1; if (keys.down) vy += 1;
+  if (keys.left) vx -= 1; if (keys.right) vx += 1;
+  if (!vx && !vy) return false;
+  if (performance.now() < turnHold) { me.moving = false; return true; }
+  const dd = Math.hypot(vx, vy);
+  const sp = SPEED * (keys.dash ? DASH : 1);
+  const nx = Math.min(Math.max(me.x + vx / dd * sp * dt, 10), W - 10);
+  const ny = Math.min(Math.max(me.y + vy / dd * sp * dt, 30), H - 6);
+  tryMove(me, nx, ny);
+  me.tx = me.x; me.ty = me.y;
+  me.moving = true;
+  me.dir = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? 'right' : 'left') : (vy > 0 ? 'down' : 'up');
+  if (now - lastKeyPush > 180) { lastKeyPush = now; me.push && me.push(); }
+  return true;
+}
+
+// ================= チャット・ステータス・エモート =================
+function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const t = inp.value.trim(); if (!t || !me || !db) return;
+  db.ref('rooms/main/chat').push({ n: me.name, t, pid: me.id, ts: firebase.database.ServerValue.TIMESTAMP });
+  inp.value = '';
+}
+document.getElementById('sendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+function setStatus(st) {
+  if (!me) return;
+  me.st = st; me.push && me.push();
+  document.getElementById('stWork').classList.toggle('active', st === 'work');
+  document.getElementById('stBreak').classList.toggle('active', st === 'break');
+}
+let lastWorkNotify = 0;
+document.getElementById('stWork').addEventListener('click', () => {
+  if (!me) return;
+  setStatus('work');
+  if (Date.now() - lastWorkNotify > 60000) {
+    lastWorkNotify = Date.now();
+    notifyDiscord(`🟢 ${me.name}さんがメタ部屋で作業を開始しました！`);
+  }
+});
+document.getElementById('stBreak').addEventListener('click', () => setStatus('break'));
+document.getElementById('goHomeBtn').addEventListener('click', goHome);
+function goHome() {
+  if (!me) return;
+  notifyDiscord(`🏠 ${me.name}さんが帰宅しました。おつかれさま！`);
+  stopShare(); teardownViewer(); setDecoMode(false);
+  if (myRef) myRef.remove();
+  me = null;
+  document.getElementById('online').textContent = 'おつかれさまでした！';
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('enterBtn').textContent = 'もう一度入室する';
+}
+function emote(kind, ms) {
+  if (!me) return;
+  me.em = kind; me.emu = Date.now() + ms;
+  me.push && me.push();
+}
+document.getElementById('danceBtn').addEventListener('click', () => emote('dance', 4500));
+document.getElementById('ssjBtn').addEventListener('click', () => emote('ssj', 6000));
+document.getElementById('discordBtn').addEventListener('click', () => {
+  if (window.DISCORD_VOICE_URL) window.open(window.DISCORD_VOICE_URL, '_blank');
+  else alert('Discordボイスチャンネルのリンクは準備中です');
+});
+document.getElementById('dressBtn').addEventListener('click', () => {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('enterBtn').textContent = 'これに着替える';
+});
+
+// ================= デコモードUI =================
+function setDecoMode(on) {
+  decoMode = on && !!me;
+  document.getElementById('decoBtn').classList.toggle('active', decoMode);
+  document.getElementById('decoBar').style.display = decoMode ? 'flex' : 'none';
+}
+document.getElementById('decoBtn').addEventListener('click', () => setDecoMode(!decoMode));
+document.getElementById('decoDone').addEventListener('click', () => setDecoMode(false));
+document.getElementById('decoDelBtn').addEventListener('click', () => {
+  decoDel = !decoDel;
+  document.getElementById('decoDelBtn').classList.toggle('sel', decoDel);
+});
+document.getElementById('decoResetBtn').addEventListener('click', () => {
+  if (db && confirm('家具を全部はじめの配置に戻す？（デコは残ります）')) db.ref('rooms/main/layout').remove();
+});
+const diWrap = document.getElementById('decoItems');
+DECO_ITEMS.forEach(([label], i) => {
+  const b = document.createElement('button');
+  b.className = 'dc' + (i === 0 ? ' sel' : ''); b.textContent = label;
+  b.addEventListener('click', () => {
+    decoSel = i; decoDel = false;
+    document.getElementById('decoDelBtn').classList.remove('sel');
+    [...diWrap.children].forEach((c, j) => c.classList.toggle('sel', j === i));
+  });
+  diWrap.appendChild(b);
+});
+
+// ================= 入室UI =================
+const av = {
+  hs: +(localStorage.getItem('m_hs') || 0), hc: +(localStorage.getItem('m_hc') || 0),
+  sc: +(localStorage.getItem('m_sc') || 0), pc: +(localStorage.getItem('m_pc') || 0),
+  ac: +(localStorage.getItem('m_ac') || 0),
+};
+function optRow(elId, items, key, isColor) {
+  const el = document.getElementById(elId); el.innerHTML = '';
+  items.forEach((it, i) => {
+    const d = document.createElement(isColor ? 'div' : 'button');
+    d.className = (isColor ? 'sw' : 'hs') + (i === av[key] ? ' sel' : '');
+    if (isColor) d.style.background = it; else d.textContent = it;
+    d.addEventListener('click', () => {
+      av[key] = i;
+      [...el.children].forEach((c, j) => c.classList.toggle('sel', j === i));
+      drawPreview();
+    });
+    el.appendChild(d);
+  });
+}
+optRow('hairStyles', HAIR_STYLES, 'hs', false);
+optRow('hairColors', HAIR_COLORS, 'hc', true);
+optRow('accs', ACCS, 'ac', false);
+optRow('shirtColors', SHIRT_COLORS, 'sc', true);
+optRow('pantsColors', PANTS_COLORS, 'pc', true);
+const pcv = document.getElementById('preview');
+const pctx = pcv.getContext('2d'); pctx.imageSmoothingEnabled = false;
+function drawPreview() {
+  pctx.clearRect(0, 0, 72, 84);
+  pctx.save(); pctx.scale(2, 2);
+  drawAvatar(pctx, 18, 39, av, false, 0, 'down', '');
+  pctx.restore();
+}
+drawPreview();
+document.getElementById('nameInput').value = localStorage.getItem('metaname') || '';
+document.getElementById('enterBtn').addEventListener('click', enter);
+document.getElementById('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') enter(); });
+function enter() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { document.getElementById('err').textContent = 'なまえを入れてね'; return; }
+  localStorage.setItem('metaname', name);
+  ['hs', 'hc', 'sc', 'pc', 'ac'].forEach(k => localStorage.setItem('m_' + k, av[k]));
+  document.getElementById('login').style.display = 'none';
+  if (me) {
+    Object.assign(me, { name, hs: av.hs, hc: av.hc, sc: av.sc, pc: av.pc, ac: av.ac });
+    me.push && me.push();
+    return;
+  }
+  let id = sessionStorage.getItem('metaid');
+  if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('metaid', id); }
+  const sx = 336 + Math.random() * 40, sy = 418 + Math.random() * 8;
+  me = { id, name, hs: av.hs, hc: av.hc, sc: av.sc, pc: av.pc, ac: av.ac,
+    x: sx, y: sy, tx: sx, ty: sy, st: 'work', dir: 'down', em: '', emu: 0 };
+  document.getElementById('stWork').classList.add('active');
+  document.getElementById('stBreak').classList.remove('active');
+  try { connect(); } catch (e) { document.getElementById('online').textContent = '⚠ 接続エラー: ' + e.message; }
+}
+
+// ================= メインループ =================
+rebuildObstacles();
+buildRoom();
+let last = performance.now();
+function step(p, dt) {
+  const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
+  p.moving = d > 1;
+  if (p.moving) {
+    const mv = Math.min(SPEED * dt, d);
+    const moved = tryMove(p, p.x + dx / d * mv, p.y + dy / d * mv);
+    if (moved) {
+      p.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    } else {
+      p.moving = false;
+      if (me && p.id === me.id) { me.tx = me.x; me.ty = me.y; }
+    }
+  }
+}
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, .1); last = now;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(room, 0, 0);
+  const frame = Math.floor(now / 150);
+  const all = Object.values(others);
+  if (me) {
+    if (!keyMove(dt, now)) step(me, dt);
+    all.push(me);
+  }
+  for (const o of Object.values(others)) step(o, dt);
+  const drawList = [];
+  for (const d of Object.values(decos)) drawList.push({ y: d.y, deco: d });
+  for (const p of all) drawList.push({ y: p.y, p });
+  drawList.sort((a, b) => a.y - b.y);
+  ctx.save(); ctx.scale(S, S);
+  g = ctx;
+  // ドラッグ中の家具はカーソル追従で手前描画
+  if (dragFurnId) {
+    const f = FURN_DEFAULT.find(f2 => f2.id === dragFurnId);
+    if (f) { const p = furnPos(f); FURN_TYPES[f.t].d(p.x, p.y, f.c); g = ctx; }
+  }
+  for (const item of drawList) {
+    if (item.deco) { const fn = DECO_ITEMS[item.deco.t % DECO_ITEMS.length][1]; fn(item.deco.x, item.deco.y); g = ctx; }
+    else {
+      const p = item.p;
+      const em = p.emu > Date.now() ? p.em : '';
+      drawAvatar(ctx, p.x, p.y, p, p.moving, frame, p.dir, em);
+    }
+  }
+  ctx.restore();
+  for (const p of all) drawTag(p, frame);
+  requestAnimationFrame(loop);
+}
+function drawTag(p, frame) {
+  const nx = p.x * S, ny = (p.y - 35) * S;
+  ctx.font = 'bold 17px sans-serif'; ctx.textAlign = 'center';
+  const em = p.emu > Date.now() ? p.em : '';
+  const icon = em === 'dance' ? '💃 ' : em === 'ssj' ? '⚡ ' : (p.st === 'break' ? '☕ ' : '💻 ');
+  const tag = icon + p.name;
+  const tw = ctx.measureText(tag).width + 14;
+  const isMe = me && p.id === me.id;
+  ctx.fillStyle = isMe ? 'rgba(232,180,90,.94)' : 'rgba(23,18,31,.78)';
+  rr(nx - tw / 2, ny - 19, tw, 23, 6);
+  ctx.fillStyle = isMe ? '#17121f' : '#fff';
+  ctx.fillText(tag, nx, ny - 2);
+  if (em === 'dance') {
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(frame % 2 ? '♪' : '♫', nx + (frame % 4 < 2 ? 40 : -40), ny - 26);
+  }
+  const b = bubbles[p.id];
+  if (b && b.until > Date.now()) {
+    ctx.font = '16px sans-serif';
+    const lines = wrap(b.text, 20);
+    const bw = Math.min(380, Math.max(...lines.map(l => ctx.measureText(l).width)) + 22);
+    const bh = lines.length * 21 + 13;
+    const bx = Math.min(Math.max(nx, bw / 2 + 4), W * S - bw / 2 - 4);
+    const by = Math.max(ny - 26 - bh, 4);
+    ctx.fillStyle = '#fff'; rr(bx - bw / 2, by, bw, bh, 8);
+    ctx.beginPath(); ctx.moveTo(nx - 6, by + bh); ctx.lineTo(nx + 6, by + bh); ctx.lineTo(nx, by + bh + 8); ctx.fill();
+    ctx.fillStyle = '#222';
+    lines.forEach((l, i) => ctx.fillText(l, bx, by + 20 + i * 21));
+  }
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
+function wrap(t, n) { const out = []; for (let i = 0; i < t.length; i += n) out.push(t.slice(i, i + n)); return out.slice(0, 5); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
