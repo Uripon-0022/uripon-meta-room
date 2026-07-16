@@ -145,8 +145,7 @@
   <button id="decoDone" class="dc">✅ おわり</button>
 </div>
 
-<footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。<br>
-Art: <a href="https://limezu.itch.io/moderninteriors" target="_blank" rel="noopener" style="color:#8ac8f8">Modern Interiors by LimeZu</a></footer>
+<footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。</footer>
 
 <div id="lightbox"><img id="lightboxImg"></div>
 <div id="toasts"></div>
@@ -169,7 +168,6 @@ Art: <a href="https://limezu.itch.io/moderninteriors" target="_blank" rel="noope
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script src="assets/atlas.js"></script>
 <script>
 'use strict';
 // ================= 基本設定 =================
@@ -195,32 +193,6 @@ function shade(hex, amt) {
   const cl = v => Math.max(0, Math.min(255, v));
   const n = parseInt(hex.slice(1), 16);
   return `rgb(${cl((n >> 16) + amt)},${cl(((n >> 8) & 255) + amt)},${cl((n & 255) + amt)})`;
-}
-
-// ================= 素材アトラス（LimeZu Modern Interiors・クレジット必須） =================
-const atlasImg = new Image();
-let atlasReady = false;
-atlasImg.onload = () => { atlasReady = true; rebuildObstacles(); buildRoom(); };
-atlasImg.onerror = () => { atlasReady = false; };
-atlasImg.src = 'assets/atlas.png';
-function reg(name) { return (window.ATLAS_MAP && window.ATLAS_MAP[name]) || null; }
-function spr(name, x, y) {
-  const r = reg(name); if (!r || !atlasReady) return false;
-  g.drawImage(atlasImg, r[0], r[1], r[2], r[3], x, y, r[2], r[3]);
-  return true;
-}
-function sprB(name, x, yBottom) {   // 下端を合わせて描く
-  const r = reg(name); if (!r || !atlasReady) return false;
-  g.drawImage(atlasImg, r[0], r[1], r[2], r[3], x, yBottom - r[3], r[2], r[3]);
-  return true;
-}
-function tileFloor(name, x0, y0, w, h) {
-  const r = reg(name); if (!r || !atlasReady) return false;
-  for (let y = y0; y < y0 + h; y += 32) for (let x = x0; x < x0 + w; x += 32) {
-    const cw2 = Math.min(32, x0 + w - x), ch2 = Math.min(32, y0 + h - y);
-    g.drawImage(atlasImg, r[0], r[1], cw2, ch2, x, y, cw2, ch2);
-  }
-  return true;
 }
 
 // ================= 家具パーツの描画 =================
@@ -264,12 +236,8 @@ function fPalm(x, y) {
     g.beginPath(); g.ellipse(x + 4 + dx, y + dy, 8, 3.5, dx * .06, 0, 7); g.fill();
   }
 }
-function fTv(x, y) {
-  if (sprB('tv_stand', x + 7, y + 14)) return;
-  outlineRect(x, y, 30, 14, '#3a3a42'); px(x + 2, y + 2, 26, 10, '#4a90c8'); px(x + 4, y + 4, 10, 2, '#a8dcf0');
-}
+function fTv(x, y) { outlineRect(x, y, 30, 14, '#3a3a42'); px(x + 2, y + 2, 26, 10, '#4a90c8'); px(x + 4, y + 4, 10, 2, '#a8dcf0'); }
 function fShelf(x, y) {
-  if (sprB('shelf', x - 4, y + 18)) return;
   outlineRect(x, y, 24, 18, '#8a5f38'); px(x, y, 24, 2, '#a8783e');
   for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++)
     px(x + 2 + i * 3.5, y + 3 + r * 8, 2.5, 6, ['#c05858', '#5878c0', '#58a058', '#c0a040', '#9058b0'][(i + r) % 5]);
@@ -279,7 +247,6 @@ function fBoard(x, y) {
   px(x + 5, y + 4, 9, 3, '#e88a8a'); px(x + 17, y + 5, 9, 3, '#8ab2e0'); px(x + 8, y + 9, 10, 3, '#a8d890');
 }
 function fPlant(x, y) {
-  if (sprB('plant', x - 3, y + 12)) return;
   outlineRect(x, y + 5, 10, 7, '#a86a3a'); px(x + 1, y + 6, 8, 2, '#c08048');
   g.fillStyle = '#4a9a4a'; g.beginPath(); g.arc(x + 5, y + 1, 7, 0, 7); g.fill();
   g.fillStyle = '#5ab45a'; g.beginPath(); g.arc(x + 3, y - 1, 4, 0, 7); g.fill();
@@ -321,15 +288,6 @@ function fHearth(x, y) {
   fCushion(x - 18, y + 8); fCushion(x + 42, y + 8);
 }
 function fCushion(x, y) { outlineRect(x, y, 12, 9, '#9060a8'); px(x + 1, y + 1, 10, 3, '#a878c0'); }
-// デスク列（LimeZuの机+椅子ユニット×3席・素材なし時は簡易描画）
-function fDeskRow(x, y) {
-  if (atlasReady) {
-    for (let i = 0; i < 3; i++) spr('desk_unit', x + i * 16, y - 22);
-    return;
-  }
-  outlineRect(x, y, 48, 16, '#b08050'); px(x, y, 48, 3, shade('#b08050', 25));
-  for (let i = 0; i < 3; i++) officeChair(x + 3 + i * 16, y - 9);
-}
 // デスク島（2列×3席＝6席・小物つき）
 function fIsland(x, y, c) {
   g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x - 2, y + 40, 98, 5);
@@ -394,9 +352,7 @@ const FURN_TYPES = {
   thRug: { d: fThRug, bw: 0, bh: 0, hw: 68, hh: 30 }, thTable: { d: fThTable, bw: 20, bh: 10 },
   popcorn: { d: fPopcorn, bw: 14, bh: 20 }, tansu: { d: fTansu, bw: 36, bh: 18 },
   redTable: { d: fRedTable, bw: 48, bh: 32 }, hearth: { d: fHearth, bw: 36, bh: 28 },
-  island: { d: fIsland, bw: 94, bh: 40 }, deskRow: { d: fDeskRow, bw: 48, bh: 26 },
-  catTower: { d: fCatTower, bw: 16, bh: 20 },
-  tree: { d: (x, y) => { if (!sprB('tree', x - 8, y + 14)) fPlant(x, y); }, bw: 16, bh: 14 },
+  island: { d: fIsland, bw: 94, bh: 40 }, catTower: { d: fCatTower, bw: 16, bh: 20 },
   vending: { d: fVending, bw: 16, bh: 26 }, wboard: { d: fWboard, bw: 48, bh: 12 },
   mtable: { d: fMtable, bw: 64, bh: 26 }, readDesk: { d: fReadDesk, bw: 52, bh: 10 },
   bench: { d: fBench, bw: 22, bh: 7 }, cushion: { d: fCushion, bw: 0, bh: 0, hw: 12, hh: 9 },
@@ -408,7 +364,7 @@ const FURN_DEFAULT = [
   { id: 'booth1', t: 'booth', x: 30, y: 152 }, { id: 'booth2', t: 'booth', x: 100, y: 152 }, { id: 'booth3', t: 'booth', x: 160, y: 152 },
   { id: 'pod1', t: 'podDesk', x: 218, y: 26 }, { id: 'pod2', t: 'podDesk', x: 274, y: 26 },
   { id: 'tv', t: 'tv', x: 338, y: 24 }, { id: 'shelfA', t: 'shelf', x: 378, y: 22 }, { id: 'shelfB', t: 'shelf', x: 406, y: 22 },
-  { id: 'board', t: 'board', x: 444, y: 24 }, { id: 'plantL', t: 'tree', x: 490, y: 22 },
+  { id: 'board', t: 'board', x: 444, y: 24 }, { id: 'plantL', t: 'plant', x: 490, y: 24 },
   { id: 'sofaG', t: 'sofaSet', x: 348, y: 50, c: '#88b858' }, { id: 'sofaY', t: 'sofaSet', x: 438, y: 50, c: '#e8b040' },
   { id: 'sofaR', t: 'sofaSet', x: 348, y: 94, c: '#d86878' }, { id: 'sofaB', t: 'sofaSet', x: 438, y: 94, c: '#6890d8' },
   { id: 'thRug', t: 'thRug', x: 546, y: 121 },
@@ -416,10 +372,8 @@ const FURN_DEFAULT = [
   { id: 'thTable', t: 'thTable', x: 566, y: 128 }, { id: 'popcorn', t: 'popcorn', x: 610, y: 66 },
   { id: 'tansu', t: 'tansu', x: 150, y: 206 }, { id: 'redTable', t: 'redTable', x: 40, y: 230 },
   { id: 'hearth', t: 'hearth', x: 124, y: 272 },
-  { id: 'desk1a', t: 'deskRow', x: 240, y: 180 }, { id: 'desk1b', t: 'deskRow', x: 240, y: 236 },
-  { id: 'desk2a', t: 'deskRow', x: 340, y: 180 }, { id: 'desk2b', t: 'deskRow', x: 340, y: 236 },
-  { id: 'desk3a', t: 'deskRow', x: 240, y: 320 }, { id: 'desk3b', t: 'deskRow', x: 240, y: 376 },
-  { id: 'desk4a', t: 'deskRow', x: 340, y: 320 }, { id: 'desk4b', t: 'deskRow', x: 340, y: 376 },
+  { id: 'island1', t: 'island', x: 242, y: 170, c: '#b08050' }, { id: 'island2', t: 'island', x: 392, y: 170, c: '#b08050' },
+  { id: 'island3', t: 'island', x: 242, y: 300, c: '#c8a878' }, { id: 'island4', t: 'island', x: 392, y: 300, c: '#c8a878' },
   { id: 'catTower', t: 'catTower', x: 216, y: 140 },
   { id: 'vend1', t: 'vending', x: 496, y: 236 }, { id: 'vend2', t: 'vending', x: 496, y: 266 },
   { id: 'bench', t: 'bench', x: 28, y: 352 },
@@ -459,51 +413,36 @@ function buildRoom() {
   g = room.getContext('2d'); g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, room.width, room.height);
   g.save(); g.scale(S, S);
-  // 石畳（素材があればタイル床）
-  if (!tileFloor('fl_hall', 0, 0, W, H)) {
-    for (let y = 0; y < H; y += 8) for (let x = -8; x < W; x += 16) {
-      const off = (y / 8) % 2 ? 8 : 0;
-      px(x + off, y, 16, 8, (Math.floor(x / 16) + y / 8) % 2 ? '#b0aab8' : '#a6a0ae');
-      px(x + off, y + 7, 16, 1, '#928c9e');
-    }
+  // 石畳
+  for (let y = 0; y < H; y += 8) for (let x = -8; x < W; x += 16) {
+    const off = (y / 8) % 2 ? 8 : 0;
+    px(x + off, y, 16, 8, (Math.floor(x / 16) + y / 8) % 2 ? '#b0aab8' : '#a6a0ae');
+    px(x + off, y + 7, 16, 1, '#928c9e');
   }
   // 外壁と窓
-  if (atlasReady) {
-    const r = reg('wall');
-    for (let x = 0; x < W; x += 32) g.drawImage(atlasImg, r[0], r[1] + r[3] - 20, r[2], 20, x, 0, 32, 20);
-  } else {
-    px(0, 0, W, 14, '#7a687e'); px(0, 14, W, 4, '#584a5e'); px(0, 18, W, 2, 'rgba(0,0,0,.15)');
-    for (let i = 0; i < 7; i++) {
-      px(30 + i * 88, 2, 26, 10, O); px(31 + i * 88, 3, 24, 8, '#9adcf0');
-      px(31 + i * 88, 3, 24, 3, '#c8ecf8'); px(42 + i * 88, 3, 2, 8, O);
-    }
+  px(0, 0, W, 14, '#7a687e'); px(0, 14, W, 4, '#584a5e'); px(0, 18, W, 2, 'rgba(0,0,0,.15)');
+  for (let i = 0; i < 7; i++) {
+    px(30 + i * 88, 2, 26, 10, O); px(31 + i * 88, 3, 24, 8, '#9adcf0');
+    px(31 + i * 88, 3, 24, 3, '#c8ecf8'); px(42 + i * 88, 3, 2, 8, O);
   }
-  // カフェ床（パーケット＋レンガ／素材はヘリンボーン）
-  if (!tileFloor('fl_herring', 6, 20, 196, 172)) {
-    for (let y = 20; y < 192; y += 6) for (let x = 6; x < 202; x += 6)
-      px(x, y, 6, 6, (x / 6 + y / 6) % 2 ? '#d2b488' : '#c8aa7e');
-    for (let x = 6; x < 202; x += 12) { px(x, 20, 11, 5, '#a0522d'); px(x + 6, 25, 11, 5, '#a0522d'); px(x, 25, 5, 5, '#8b4226'); }
-  }
+  // カフェ床（パーケット＋レンガ）
+  for (let y = 20; y < 192; y += 6) for (let x = 6; x < 202; x += 6)
+    px(x, y, 6, 6, (x / 6 + y / 6) % 2 ? '#d2b488' : '#c8aa7e');
+  for (let x = 6; x < 202; x += 12) { px(x, 20, 11, 5, '#a0522d'); px(x + 6, 25, 11, 5, '#a0522d'); px(x, 25, 5, 5, '#8b4226'); }
   // ポッド床
   for (const bx of [212, 268]) {
-    if (!tileFloor('fl_dark', bx, 20, 52, 60)) {
-      px(bx, 20, 52, 60, '#565662');
-      for (let y = 20; y < 80; y += 6) for (let x = bx; x < bx + 52; x += 6)
-        if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.04)');
-    }
+    px(bx, 20, 52, 60, '#565662');
+    for (let y = 20; y < 80; y += 6) for (let x = bx; x < bx + 52; x += 6)
+      if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.04)');
     px(bx, 20, 1, 60, '#3c3c46'); px(bx + 51, 20, 1, 60, '#3c3c46');
   }
   // ラウンジ床
-  if (!tileFloor('fl_lounge', 330, 20, 190, 132)) {
-    px(330, 20, 190, 132, '#e8d090');
-    for (let y = 22; y < 152; y += 8) px(330, y, 190, 1, 'rgba(0,0,0,.04)');
-  }
-  // シアター床＋大画面（7th上映中）
-  if (!tileFloor('fl_dark', 526, 20, 106, 220)) {
-    px(526, 20, 106, 220, '#2c2838');
-    for (let y = 20; y < 240; y += 6) for (let x = 526; x < 632; x += 6)
-      if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.03)');
-  }
+  px(330, 20, 190, 132, '#e8d090');
+  for (let y = 22; y < 152; y += 8) px(330, y, 190, 1, 'rgba(0,0,0,.04)');
+  // シアター床＋大画面（7th上映中・会議室ぶん拡張して大きなシアターに）
+  px(526, 20, 106, 220, '#2c2838');
+  for (let y = 20; y < 240; y += 6) for (let x = 526; x < 632; x += 6)
+    if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.03)');
   outlineRect(532, 24, 92, 44, '#101018');
   px(534, 26, 88, 40, '#181828'); px(536, 28, 84, 3, 'rgba(255,255,255,.06)');
   g.font = 'bold 26px sans-serif'; g.textAlign = 'center';
@@ -513,20 +452,16 @@ function buildRoom() {
   px(540, 32, 3, 3, '#f8e880'); px(612, 56, 3, 3, '#f8e880'); px(600, 34, 2, 2, '#a8c8f8');
   px(534, 62, 88, 3, 'rgba(255,200,120,.15)');
   // 和室床
-  if (!tileFloor('fl_tatami', 8, 200, 194, 132)) {
-    px(8, 200, 194, 132, '#a8c088');
-    for (let ty = 200; ty < 332; ty += 33) for (let tx = 8; tx < 202; tx += 97) {
-      px(tx, ty, 97, 33, ((tx + ty) / 33) % 2 ? '#a8c088' : '#9cb47c');
-      g.strokeStyle = '#7e985e'; g.lineWidth = 1; g.strokeRect(tx + .5, ty + .5, 97, 33);
-    }
+  px(8, 200, 194, 132, '#a8c088');
+  for (let ty = 200; ty < 332; ty += 33) for (let tx = 8; tx < 202; tx += 97) {
+    px(tx, ty, 97, 33, ((tx + ty) / 33) % 2 ? '#a8c088' : '#9cb47c');
+    g.strokeStyle = '#7e985e'; g.lineWidth = 1; g.strokeRect(tx + .5, ty + .5, 97, 33);
   }
   px(8, 200, 194, 2, '#8a6238'); px(8, 330, 194, 2, '#8a6238');
   // もくもくエリア床（会議室・図書室ぶん右下へ拡張）
-  if (!(tileFloor('fl_wood', 206, 116, 314, 128) && tileFloor('fl_wood', 206, 244, 426, 188))) {
-    px(206, 116, 314, 128, '#d8d4dc');
-    px(206, 244, 426, 188, '#d8d4dc');
-    for (let y = 116; y < 432; y += 10) px(206, y, y < 244 ? 314 : 426, 1, 'rgba(0,0,0,.05)');
-  }
+  px(206, 116, 314, 128, '#d8d4dc');
+  px(206, 244, 426, 188, '#d8d4dc');
+  for (let y = 116; y < 432; y += 10) px(206, y, y < 244 ? 314 : 426, 1, 'rgba(0,0,0,.05)');
   px(206, 116, 1, 316, '#b8b2c0');
   px(330, 416, 52, 6, '#4868b0'); px(332, 417, 48, 4, '#5878c0');
   // 「とにかくやれ」フロアペイント（右端の空きスペース）
