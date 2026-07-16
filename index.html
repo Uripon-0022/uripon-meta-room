@@ -34,8 +34,9 @@
     padding: 4px 8px; font-size: 12px; background: #2c2340; }
   #shareClose { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 0 4px; }
   #shareVideo { width: 100%; display: block; background: #000; }
-  #chatPanel { width: 270px; display: flex; flex-direction: column;
+  #chatPanel { width: 270px; display: flex; flex-direction: column; overflow: hidden;
     background: #1c1628; border: 3px solid #120d1c; border-radius: 6px; }
+  #main { align-items: flex-start; }
   #chatHead { padding: 8px 10px; font-size: 13px; font-weight: bold; background: #2c2340; border-radius: 3px 3px 0 0; }
   #log { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; line-height: 1.7; min-height: 0; }
   #log .n { color: #e8b45a; font-weight: bold; }
@@ -1034,6 +1035,15 @@ function enter() {
   document.getElementById('stBreak').classList.remove('active');
   try { connect(); } catch (e) { document.getElementById('online').textContent = '⚠ 接続エラー: ' + e.message; }
 }
+
+// ================= チャットパネルの高さを部屋に合わせる（無限に伸びる問題の対策） =================
+function sizeChat() {
+  const st = document.getElementById('stage');
+  const cp = document.getElementById('chatPanel');
+  cp.style.height = (window.innerWidth > 760 ? st.clientHeight : 190) + 'px';
+}
+window.addEventListener('resize', sizeChat);
+requestAnimationFrame(sizeChat);
 
 // ================= メインループ =================
 rebuildObstacles();
