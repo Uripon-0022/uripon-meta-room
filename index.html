@@ -981,6 +981,9 @@ function showChatNotification(name, text, img, key = '') {
     return false;
   }
 }
+function shouldNotifyChatMessage(message) {
+  return !!message && (!me || !message.pid || message.pid !== me.id);
+}
 document.getElementById('chatNotifyBtn').addEventListener('click', toggleChatNotifications);
 refreshChatNotificationButton();
 
@@ -1108,10 +1111,9 @@ function connect() {
     const age = Date.now() - Number(m.ts || 0);
     const fresh = age >= -5000 && age < 15000;
     if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
-    if (fresh) {
-      // 検証期間中は自分の投稿もOS通知の対象にする。画面内トーストは他ユーザーのみ。
+    if (fresh && shouldNotifyChatMessage(m)) {
       showChatNotification(m.n, m.t || '', m.img, chatKey);
-      if (!me || m.pid !== me.id) toast(m.n, m.t || '📷 画像');
+      toast(m.n, m.t || '📷 画像');
     }
   });
   db.ref('rooms/main/chat').on('child_removed', snap => {
