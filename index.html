@@ -121,10 +121,17 @@
     flex-direction: column; background: #fff; color: #2f2935; border: 3px solid #e8b45a;
     border-radius: 14px; box-shadow: 0 12px 38px rgba(25,18,35,.32); overflow: hidden; }
   #decorPanel.open { display: flex; }
+  #decorPanel.dockedTop { top: 10px; bottom: auto; }
+  #decorPanel.collapsed { width: min(520px, 96vw); height: auto; max-height: none; }
+  #decorPanel.collapsed #decorCategories,
+  #decorPanel.collapsed #decorGrid,
+  #decorPanel.collapsed #decorActions { display: none; }
   #decorHead { display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 10px 12px; border-bottom: 1px solid #e7e1ea; }
   #decorHead strong { font-size: 15px; }
-  #decorClose { background: #f1edf4; color: #2f2935; border-color: #ddd4e3; padding: 4px 10px; }
+  #decorHeadActions { display: flex; align-items: center; gap: 5px; }
+  #decorDock, #decorCollapse, #decorClose { background: #f1edf4; color: #2f2935;
+    border-color: #ddd4e3; padding: 4px 9px; white-space: nowrap; }
   #decorCategories { display: flex; align-items: center; gap: 5px; padding: 8px 10px;
     min-height: 46px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid #eee;
     box-sizing: border-box; }
@@ -251,11 +258,11 @@
   <button id="zoomInBtn" title="ズームイン">🔎＋</button>
 </div>
 <div id="decorPanel" aria-hidden="true">
-  <div id="decorHead"><strong>🛋 お部屋のデコ</strong><button id="decorClose" type="button">✕ 閉じる</button></div>
+  <div id="decorHead"><strong>🛋 お部屋のデコ</strong><span id="decorHeadActions"><button id="decorDock" type="button" title="パネルを画面上側へ移動">⇅ 上</button><button id="decorCollapse" type="button" title="選択を残したまま一覧を畳む">− 畳む</button><button id="decorClose" type="button" title="デコ編集を終了">✕</button></span></div>
   <div id="decorCategories"></div>
   <div id="decorGrid"></div>
   <div id="decorActions">
-    <span id="decorHint">家具を選んで配置。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。</span>
+    <span id="decorHint">家具を選んで配置。「畳む」で画面を広く使えます。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。</span>
     <button id="decorDelete" type="button" disabled>🗑 削除</button>
   </div>
 </div>
@@ -745,6 +752,8 @@ let decorMode = false;
 let decorCategory = 'all';
 let selectedDecorItem = null;
 let selectedDecorKey = null;
+let decorPanelCollapsed = false;
+let decorPanelDockTop = false;
 let draggingDecorKey = null;
 let decorDragOffsetX = 0, decorDragOffsetY = 0;
 let decorPanning = false;
@@ -811,10 +820,29 @@ function updateDecorActions() {
     hint.textContent = `${selectedDecorItem}を部屋の好きな場所へ置いてください。`;
     del.disabled = true;
   } else {
-    hint.textContent = '家具を選んで配置。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。';
+    hint.textContent = '家具を選んで配置。「畳む」で画面を広く使えます。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。';
     del.disabled = true;
   }
   updateDecorCursor();
+}
+function updateDecorPanelLayout() {
+  const panel = document.getElementById('decorPanel');
+  panel.classList.toggle('collapsed', decorPanelCollapsed);
+  panel.classList.toggle('dockedTop', decorPanelDockTop);
+  const collapse = document.getElementById('decorCollapse');
+  collapse.textContent = decorPanelCollapsed ? '＋ 開く' : '− 畳む';
+  collapse.title = decorPanelCollapsed ? 'アイテム一覧を開く' : '選択を残したまま一覧を畳む';
+  const dock = document.getElementById('decorDock');
+  dock.textContent = decorPanelDockTop ? '⇅ 下' : '⇅ 上';
+  dock.title = decorPanelDockTop ? 'パネルを画面下側へ移動' : 'パネルを画面上側へ移動';
+}
+function toggleDecorPanelCollapsed() {
+  decorPanelCollapsed = !decorPanelCollapsed;
+  updateDecorPanelLayout();
+}
+function toggleDecorPanelDock() {
+  decorPanelDockTop = !decorPanelDockTop;
+  updateDecorPanelLayout();
 }
 function refreshDecorCategories() {
   const row = document.getElementById('decorCategories'); row.innerHTML = '';
@@ -854,9 +882,11 @@ function setDecoMode(on) {
   if (on && !me) { alert('入室してからデコしてね'); return; }
   decorMode = !!on;
   if (!decorMode) { draggingDecorKey = null; decorPanning = false; selectedDecorKey = null; }
+  else { decorPanelCollapsed = false; decorPanelDockTop = false; }
   const panel = document.getElementById('decorPanel');
   panel.classList.toggle('open', decorMode); panel.setAttribute('aria-hidden', decorMode ? 'false' : 'true');
   document.getElementById('decorBtn').classList.toggle('active', decorMode);
+  updateDecorPanelLayout();
   updateDecorActions();
 }
 function placeDecor(id, x, y) {
@@ -883,6 +913,8 @@ function removeSelectedDecor() {
   selectedDecorKey = null; updateDecorActions();
 }
 document.getElementById('decorBtn').addEventListener('click', () => setDecoMode(!decorMode));
+document.getElementById('decorCollapse').addEventListener('click', toggleDecorPanelCollapsed);
+document.getElementById('decorDock').addEventListener('click', toggleDecorPanelDock);
 document.getElementById('decorClose').addEventListener('click', () => setDecoMode(false));
 document.getElementById('decorDelete').addEventListener('click', removeSelectedDecor);
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && decorMode) setDecoMode(false); });
