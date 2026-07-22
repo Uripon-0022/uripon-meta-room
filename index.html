@@ -47,9 +47,9 @@
   #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #fff; color: #333; border-bottom: 2px solid #eee; border-radius: 3px 3px 0 0;
     display: flex; justify-content: space-between; align-items: center; }
   #chatHeadActions { display: flex; align-items: center; gap: 4px; }
-  #chatSaveBtn, #chatNotifyBtn { font-size: 11px; padding: 3px 8px; white-space: nowrap; }
-  #chatNotifyBtn.active { background: #e8b45a; color: #17121f; }
-  #chatNotifyBtn:disabled { cursor: not-allowed; opacity: .6; }
+  #chatSaveBtn, #chatNotifyBtn, #chatSoundBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
+  #chatNotifyBtn.active, #chatSoundBtn.active { background: #e8b45a; color: #17121f; }
+  #chatNotifyBtn:disabled, #chatSoundBtn:disabled { cursor: not-allowed; opacity: .6; }
   #chatExportOverlay { position: fixed; inset: 0; z-index: 27; display: none;
     align-items: center; justify-content: center; padding: 16px; background: rgba(34,28,44,.36); }
   #chatExportOverlay.open { display: flex; }
@@ -213,7 +213,7 @@
     </div>
   </div></div>
   <div id="chatPanel">
-    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
+    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
     <div id="chatForm">
       <button id="imgBtn" title="画像を送る">📎</button>
@@ -932,14 +932,94 @@ function notifyDiscord(text) {
 // ================= チャットのブラウザ通知 =================
 // 権限要求はユーザー操作が必要なため、チャット見出しのボタンからのみ行う。
 const CHAT_NOTIFICATION_PREF = 'm3_chat_notifications';
+const CHAT_SOUND_PREF = 'm3_chat_sound';
 const notifiedChatKeys = new Set();
 let chatNotificationRegistrationPromise = null;
+let chatAudioContext = null;
 function chatNotificationSupported() {
   return typeof window.Notification === 'function';
 }
 function chatNotificationEnabled() {
   return chatNotificationSupported() && window.Notification.permission === 'granted'
     && localStorage.getItem(CHAT_NOTIFICATION_PREF) === '1';
+}
+function chatSoundSupported() {
+  return typeof (window.AudioContext || window.webkitAudioContext) === 'function';
+}
+function chatSoundEnabled() {
+  return chatSoundSupported() && localStorage.getItem(CHAT_SOUND_PREF) === '1';
+}
+function getChatAudioContext() {
+  if (!chatSoundSupported()) return null;
+  try {
+    if (!chatAudioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      chatAudioContext = new AudioContextClass();
+    }
+    return chatAudioContext;
+  } catch (error) {
+    console.warn('チャット通知音を初期化できませんでした', error);
+    return null;
+  }
+}
+async function unlockChatSound() {
+  const audio = getChatAudioContext();
+  if (!audio) return false;
+  try {
+    if (audio.state !== 'running') await audio.resume();
+    return audio.state === 'running';
+  } catch (error) {
+    console.warn('チャット通知音を開始できませんでした', error);
+    return false;
+  }
+}
+function playChatNotificationSound() {
+  if (!chatSoundEnabled()) return false;
+  const audio = getChatAudioContext();
+  if (!audio || audio.state !== 'running') return false;
+  try {
+    const now = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(660, now);
+    oscillator.frequency.exponentialRampToValueAtTime(880, now + .12);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.11, now + .015);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .24);
+    oscillator.connect(gain); gain.connect(audio.destination);
+    oscillator.start(now); oscillator.stop(now + .25);
+    return true;
+  } catch (error) {
+    console.warn('チャット通知音を再生できませんでした', error);
+    return false;
+  }
+}
+function refreshChatSoundButton() {
+  const button = document.getElementById('chatSoundBtn');
+  if (!button) return;
+  const supported = chatSoundSupported();
+  const enabled = chatSoundEnabled();
+  button.disabled = !supported;
+  button.classList.toggle('active', enabled);
+  button.setAttribute('aria-pressed', String(enabled));
+  button.textContent = !supported ? '🔇 非対応' : enabled ? '🔊 ON' : '🔊 音';
+  button.title = !supported ? 'このブラウザは通知音に対応していません'
+    : enabled ? '新着チャットの音はオンです（押すとオフ）'
+    : '新着チャットの音をオンにする';
+}
+function toggleChatSound() {
+  if (!chatSoundSupported()) { toast('通知音', 'このブラウザは通知音に対応していません'); return; }
+  const enable = !chatSoundEnabled();
+  localStorage.setItem(CHAT_SOUND_PREF, enable ? '1' : '0');
+  refreshChatSoundButton();
+  toast('通知音', enable ? 'チャット通知音をオンにしました' : 'チャット通知音をオフにしました');
+  if (enable) {
+    unlockChatSound().then(ready => {
+      if (ready) playChatNotificationSound();
+      else toast('通知音', '音を再生できません。ブラウザの音声設定を確認してください');
+    });
+  }
 }
 function refreshChatNotificationButton() {
   const button = document.getElementById('chatNotifyBtn');
@@ -1017,7 +1097,10 @@ function shouldNotifyChatMessage(message) {
   return !!message && (!me || !message.pid || message.pid !== me.id);
 }
 document.getElementById('chatNotifyBtn').addEventListener('click', toggleChatNotifications);
+document.getElementById('chatSoundBtn').addEventListener('click', toggleChatSound);
+document.addEventListener('pointerdown', () => { if (chatSoundEnabled()) unlockChatSound(); });
 refreshChatNotificationButton();
+refreshChatSoundButton();
 
 // ================= Firebase =================
 // メンバー個人のメールアドレスは管理せず、Firebase Auth上の「部屋専用アカウント」1件だけを使う。
@@ -1145,6 +1228,7 @@ function connect() {
     if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
     if (fresh && shouldNotifyChatMessage(m)) {
       showChatNotification(m.n, m.t || '', m.img, chatKey);
+      playChatNotificationSound();
       toast(m.n, m.t || '📷 画像');
     }
   });
