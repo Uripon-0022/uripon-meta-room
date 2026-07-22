@@ -683,8 +683,8 @@ function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
   const dance = emote === 'dance', ssj = emote === 'ssj';
   if (dance) dir = ['down', 'right', 'up', 'left'][frame % 4];
   const bob = dance ? (frame % 2) * 1.5 : moving ? (frame % 2) : 0;
-  // 着席中の影は座面の下からはみ出すので描かない。
-  if (!av.sit) {
+  // 着席中と睡眠中は、立ち姿用の足元の影を描かない。
+  if (!av.sit && !av.sleep) {
     c2.fillStyle = 'rgba(0,0,0,.25)'; c2.beginPath(); c2.ellipse(lx, ly + 1, 6, 2.4, 0, 0, 7); c2.fill();
   }
   if (ssj) {
