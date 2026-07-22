@@ -4,27 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>うりぽん号メタ部屋</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700&family=Caveat:wght@700&display=block" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: #241e30; color: #f4ead2;
     font-family: "Hiragino Maru Gothic ProN", "BIZ UDGothic", sans-serif;
     display: flex; flex-direction: column; align-items: center;
-    min-height: 100vh; padding: 8px;
+    min-height: 100vh; padding: 3px;
     touch-action: manipulation;
   }
-  header { text-align: center; margin: 2px 0 8px; }
-  h1 { font-size: 18px; letter-spacing: 2px; }
-  #online { font-size: 12px; opacity: .8; }
-  #main { display: flex; gap: 8px; width: min(1360px, 98vw); align-items: stretch; }
-  #stageWrap { flex: 1; min-width: 0; }
+  header { text-align: center; margin: 0 0 3px; width: min(2200px, 98vw);
+    background: #fff; color: #222; border-radius: 6px; padding: 5px 0; }
+  h1 { font-size: 14px; letter-spacing: 1px; font-weight: normal; }
+  #online { font-size: 11px; opacity: .75; margin-left: 8px; cursor: help; border-bottom: 1px dotted currentColor; }
+  #main { display: flex; gap: 8px; width: min(2200px, 98vw); align-items: stretch; }
+  #stageWrap { flex: 1; min-width: 0; display: flex; }
   #stage {
-    position: relative; width: 100%;
-    aspect-ratio: 640 / 440;
+    position: relative; width: 100%; height: 100%;
     border: 4px solid #120d1c; border-radius: 6px;
-    overflow: hidden; background: #120d1c;
+    overflow: hidden; background: #fff;
   }
-  canvas.game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
+  canvas.game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated;
+    cursor: pointer; touch-action: none; }
   #sharePane {
     position: absolute; top: 8px; right: 8px; width: 58%;
     background: #17121f; border: 2px solid #e8b45a; border-radius: 8px;
@@ -35,19 +39,41 @@
     padding: 4px 8px; font-size: 12px; background: #2c2340; }
   #shareClose { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; padding: 0 4px; }
   #shareVideo { width: 100%; display: block; background: #000; }
-  /* チャットパネル: 高さを部屋（アスペクト比640:440）と同じ計算式で固定する */
+  /* チャットパネル: 高さはJS(fitLayout)で部屋と同じ比率に毎回セットする */
   #chatPanel { width: 270px; display: flex; flex-direction: column; overflow: hidden;
-    height: calc((min(1360px, 98vw) - 278px) * 0.6875);
-    background: #1c1628; border: 3px solid #120d1c; border-radius: 6px; }
-  #main { align-items: flex-start; }
-  #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #2c2340; border-radius: 3px 3px 0 0;
+    background: #fff; border: 3px solid #120d1c; border-radius: 6px; }
+  #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #fff; color: #333; border-bottom: 2px solid #eee; border-radius: 3px 3px 0 0;
     display: flex; justify-content: space-between; align-items: center; }
-  #chatSaveBtn { font-size: 11px; padding: 3px 8px; }
-  #log { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; line-height: 1.7; min-height: 0; }
-  #log .n { color: #e8b45a; font-weight: bold; }
-  #log .t { color: #eee; }
-  #log .tm { color: #8a80a0; font-size: 10px; margin-right: 5px; }
-  #log a { color: #8ac8f8; word-break: break-all; }
+  #chatHeadActions { display: flex; align-items: center; gap: 4px; }
+  #chatSaveBtn, #chatNotifyBtn { font-size: 11px; padding: 3px 8px; white-space: nowrap; }
+  #chatNotifyBtn.active { background: #e8b45a; color: #17121f; }
+  #chatNotifyBtn:disabled { cursor: not-allowed; opacity: .6; }
+  #chatExportOverlay { position: fixed; inset: 0; z-index: 27; display: none;
+    align-items: center; justify-content: center; padding: 16px; background: rgba(34,28,44,.36); }
+  #chatExportOverlay.open { display: flex; }
+  #chatExportBox { width: min(430px, 94vw); padding: 18px; background: #fff; color: #2f2935;
+    border: 3px solid #e8b45a; border-radius: 14px; box-shadow: 0 12px 38px rgba(25,18,35,.28); }
+  #chatExportHead { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 14px; font-size: 16px; }
+  #chatExportClose { background: #f1edf4; color: #2f2935; border-color: #ddd4e3; padding: 4px 10px; }
+  #chatExportQuick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 14px; }
+  #chatExportQuick button { background: #fff4d8; color: #2f2935; border-color: #e8b45a; padding: 9px 6px; }
+  #chatExportDates { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 7px; }
+  #chatExportDates label { display: grid; gap: 4px; color: #6d6474; font-size: 11px; }
+  #chatExportDates input { min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 6px;
+    border: 1px solid #d9d3df; border-radius: 6px; background: #fff; color: #2f2935; font: inherit; }
+  #chatExportRange { width: 100%; margin-top: 12px; background: #e8b45a; color: #17121f;
+    border-color: #d19b3f; font-weight: bold; }
+  #chatExportNote { margin: 10px 0 0; color: #817787; font-size: 11px; line-height: 1.5; }
+  #log { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; line-height: 1.7; min-height: 0; background: #fff; }
+  #log .n { color: #b8791e; font-weight: bold; }
+  #log .t { color: #222; }
+  #log .tm { color: #999; font-size: 10px; margin-right: 5px; }
+  #log .chat-row { position: relative; min-height: 22px; padding-right: 27px; }
+  #log .chat-delete { position: absolute; top: 1px; right: 0; padding: 1px 4px;
+    border: 0; border-radius: 4px; background: transparent; color: #a39aa8; font-size: 11px; line-height: 18px; }
+  #log .chat-delete:hover, #log .chat-delete:focus-visible { background: #f3e9e9; color: #b33c3c; }
+  #log a { color: #1a73c9; word-break: break-all; }
   #log img.chatimg { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 3px 0; cursor: zoom-in; }
   #imgBtn { padding: 8px 10px; }
   #lightbox { position: fixed; inset: 0; background: rgba(10,8,16,.92); display: none;
@@ -63,59 +89,93 @@
   @keyframes toastIn { from { transform: translateX(24px); opacity: 0; } }
   #chatForm { display: flex; gap: 4px; padding: 6px; border-top: 2px solid #120d1c; }
   #chatInput { flex: 1; min-width: 0; padding: 8px; font-size: 13px; color: #222; border-radius: 6px; border: none; }
-  #bar { width: min(1360px, 98vw); margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  #bar { width: min(2200px, 98vw); margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   button { font-family: inherit; font-size: 14px; border-radius: 6px; border: 2px solid #120d1c;
     padding: 8px 14px; background: #4a3f63; color: #fff; cursor: pointer; }
   button.active { background: #e8b45a; color: #17121f; font-weight: bold; }
   #goHomeBtn { background: #8a4a5a; }
+  #sitBtn { background: #5f7f68; }
+  #sitBtn.active { background: #e8b45a; }
   #discordBtn { background: #5865F2; }
   #shareBtn.sharing { background: #d84848; }
-  #decoBtn.active { background: #e07ab0; color: #fff; }
-  #decoBar { width: min(1360px, 98vw); margin-top: 6px; display: none; gap: 6px; flex-wrap: wrap; align-items: center;
-    background: #1c1628; padding: 8px; border-radius: 6px; border: 2px solid #e07ab0; }
-  #decoBar .dc { font-size: 13px; padding: 6px 10px; }
-  #decoBar .dc.sel { background: #e07ab0; color: #fff; font-weight: bold; }
-  #decoBar .hint { font-size: 11px; opacity: .7; width: 100%; }
-  footer { margin-top: 8px; font-size: 11px; opacity: .55; text-align: center; line-height: 1.6; }
+  #decorPanel { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%);
+    width: min(920px, 96vw); height: min(72vh, 700px); max-height: calc(100vh - 20px);
+    z-index: 18; display: none;
+    flex-direction: column; background: #fff; color: #2f2935; border: 3px solid #e8b45a;
+    border-radius: 14px; box-shadow: 0 12px 38px rgba(25,18,35,.32); overflow: hidden; }
+  #decorPanel.open { display: flex; }
+  #decorHead { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 12px; border-bottom: 1px solid #e7e1ea; }
+  #decorHead strong { font-size: 15px; }
+  #decorClose { background: #f1edf4; color: #2f2935; border-color: #ddd4e3; padding: 4px 10px; }
+  #decorCategories { display: flex; align-items: center; gap: 5px; padding: 8px 10px;
+    min-height: 46px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid #eee;
+    box-sizing: border-box; }
+  #decorCategories button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+    height: 30px; min-height: 30px; box-sizing: border-box; font-size: 12px; line-height: 16px;
+    white-space: nowrap; padding: 5px 10px; margin: 0; background: #f1edf4;
+    color: #51485a; border-color: #ddd4e3; vertical-align: middle; }
+  #decorGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 6px;
+    flex: 1 1 auto; align-content: start; overflow-y: auto; padding: 10px; min-height: 0; }
+  .decorItem { height: 78px; padding: 3px; background: #f8f6fa; color: #51485a; border-color: #e5dfea;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 9px; }
+  .decorItem.selected { background: #fff4d8; border-color: #e8b45a; }
+  .decorItem canvas { width: 48px; height: 48px; image-rendering: pixelated; pointer-events: none; }
+  #decorActions { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid #e7e1ea; }
+  #decorHint { flex: 1; font-size: 11px; color: #6d6474; }
+  #decorDelete { background: #b94f5a; padding: 6px 11px; }
+  #decorDelete:disabled { opacity: .45; cursor: default; }
+  footer { margin-top: 4px; font-size: 10px; opacity: .55; text-align: center; line-height: 1.5; }
   @media (max-width: 760px) {
-    #main { flex-direction: column; }
-    #chatPanel { width: 100%; height: 190px; }
+    #main { flex-direction: column; height: auto !important; }
+    #stageWrap { height: auto; }
+    #stage { aspect-ratio: 480 / 320; height: auto !important; }
+    #chatPanel { width: 100%; height: 190px !important; }
     #sharePane { width: 70%; }
   }
-  #login { position: fixed; inset: 0; background: rgba(18,13,28,.94);
+  #login { position: fixed; inset: 0; background: rgba(255,255,255,.97); color: #2f2935;
     display: flex; align-items: center; justify-content: center; z-index: 20; overflow-y: auto; }
-  #loginBox { background: #2c2340; border: 3px solid #e8b45a; border-radius: 12px;
-    padding: 20px; width: min(440px, 94vw); text-align: center; margin: auto; }
-  #loginBox h2 { font-size: 16px; margin-bottom: 12px; }
-  #nameInput { width: 100%; padding: 10px; font-size: 16px; color: #222; margin-bottom: 10px; border-radius: 6px; border: none; }
-  #preview { image-rendering: pixelated; width: 144px; height: 168px; background: #4a3f63; border-radius: 8px; margin-bottom: 8px; }
+  #loginBox { background: #fff; border: 2px solid #e2c16f; border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(63,49,75,.14); padding: 20px; width: min(440px, 94vw); text-align: center; margin: auto; }
+  #loginBox h2 { color: #2f2935; font-size: 16px; margin-bottom: 12px; }
+  #nameInput { width: 100%; padding: 10px; font-size: 16px; color: #222; background: #fff; margin-bottom: 10px;
+    border-radius: 6px; border: 1px solid #d9d3df; }
+  #preview { image-rendering: auto; width: 144px; height: 168px; background: #f4f1f7; border: 1px solid #e5dfea;
+    border-radius: 8px; margin-bottom: 8px; }
   .optRow { display: flex; gap: 5px; justify-content: center; margin: 6px 0; flex-wrap: wrap; align-items: center; }
-  .optRow .lbl { font-size: 12px; opacity: .8; width: 100%; text-align: left; }
-  .sw { width: 26px; height: 26px; border-radius: 6px; border: 3px solid transparent; cursor: pointer; }
-  .sw.sel { border-color: #fff; }
-  .hs { min-width: 44px; height: 30px; border-radius: 6px; border: 3px solid transparent; cursor: pointer;
-    background: #4a3f63; color: #fff; font-size: 11px; padding: 0 4px; }
-  .hs.sel { border-color: #fff; }
+  .optRow[hidden] { display: none !important; }
+  .optRow .lbl { color: #51485a; font-size: 12px; width: 100%; text-align: left; }
+  .thumb { width: 44px; height: 62px; border-radius: 6px; border: 3px solid transparent; cursor: pointer;
+    background: #f1edf4; color: #2f2935; font-size: 10px; padding: 0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; }
+  .thumb.sel { border-color: #e8b45a; background: #fff9eb; }
+  .thumb canvas { image-rendering: auto; pointer-events: none; }
+  .thumb.small { width: 30px; height: 42px; }
+  .thumb.big { width: 76px; height: 106px; }
+  .colorChoice { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #e3dde8; cursor: pointer; }
+  .colorChoice.sel { border-color: #e8b45a; box-shadow: 0 0 0 2px #fff; }
+  .sideChoice { min-width: 68px; padding: 6px 12px; border-radius: 16px; border: 2px solid #e3dde8;
+    background: #f1edf4; color: #2f2935; cursor: pointer; }
+  .sideChoice.sel { border-color: #e8b45a; background: #fff9eb; font-weight: bold; }
   #enterBtn { width: 100%; padding: 12px; font-size: 16px; background: #e8b45a; color: #17121f; font-weight: bold; margin-top: 10px; }
   #err { color: #ff9c9c; font-size: 12px; margin-top: 8px; min-height: 1em; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🚢 うりぽん号メタ部屋</h1>
-  <div id="online">はじめに「入室する」を押してね</div>
+  <h1>🚢 うりぽん号メタ部屋 <span id="online">はじめに「入室する」を押してね</span></h1>
 </header>
 
 <div id="main">
   <div id="stageWrap"><div id="stage">
-    <canvas id="cv" class="game" width="2560" height="1760"></canvas>
+    <canvas id="cv" class="game" width="1440" height="960"></canvas>
     <div id="sharePane">
       <div id="shareHead"><span id="shareTitle">画面共有</span><span><button id="shareFull" title="全画面で見る">⛶ 全画面</button><button id="shareClose">✕</button></span></div>
       <video id="shareVideo" autoplay playsinline muted></video>
     </div>
   </div></div>
   <div id="chatPanel">
-    <div id="chatHead"><span>💬 チャット</span><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></div>
+    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
     <div id="chatForm">
       <button id="imgBtn" title="画像を送る">📎</button>
@@ -126,26 +186,50 @@
   </div>
 </div>
 
+<div id="chatExportOverlay" aria-hidden="true">
+  <div id="chatExportBox" role="dialog" aria-modal="true" aria-labelledby="chatExportTitle">
+    <div id="chatExportHead"><strong id="chatExportTitle">💾 チャットログを保存</strong><button id="chatExportClose" type="button">✕ 閉じる</button></div>
+    <div id="chatExportQuick">
+      <button id="chatExportToday" type="button">今日</button>
+      <button id="chatExportYesterday" type="button">昨日</button>
+      <button id="chatExportAll" type="button">すべて</button>
+    </div>
+    <div id="chatExportDates">
+      <label>開始日<input id="chatExportFrom" type="date"></label>
+      <span>〜</span>
+      <label>終了日<input id="chatExportTo" type="date"></label>
+    </div>
+    <button id="chatExportRange" type="button">この期間を保存</button>
+    <p id="chatExportNote">指定した日を両方含めて、Markdownファイルに保存します。</p>
+  </div>
+</div>
+
 <div id="bar">
   <button id="stWork">▶ 作業開始</button>
   <button id="stBreak">☕ 休憩中</button>
+  <button id="sitBtn" type="button" hidden>🪑 座る</button>
+  <button id="sleepBtn">🛏 寝る</button>
   <button id="goHomeBtn">🏠 帰宅</button>
   <button id="danceBtn">💃 ダンス</button>
   <button id="ssjBtn">⚡ 覚醒</button>
   <button id="shareBtn">🖥 画面共有</button>
-  <button id="decoBtn">🎨 デコ・模様替え</button>
   <button id="discordBtn">🎧 ボイス(Discord)</button>
   <button id="dressBtn">👗 着替える</button>
+  <button id="decorBtn">🛋 デコ</button>
+  <button id="zoomOutBtn" title="ズームアウト（全体表示）">🔎－</button>
+  <button id="zoomInBtn" title="ズームイン">🔎＋</button>
 </div>
-<div id="decoBar">
-  <span class="hint">🎨 模様替えモード: <b>家具やデコをつまんでドラッグで移動</b>。アイテムを選んで床クリックで設置、「🗑削除」でデコを片付け（配置はみんなに同期・保存されます）</span>
-  <span id="decoItems" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
-  <button id="decoDelBtn" class="dc">🗑 削除</button>
-  <button id="decoResetBtn" class="dc">↺ 家具を初期配置に</button>
-  <button id="decoDone" class="dc">✅ おわり</button>
+<div id="decorPanel" aria-hidden="true">
+  <div id="decorHead"><strong>🛋 お部屋のデコ</strong><button id="decorClose" type="button">✕ 閉じる</button></div>
+  <div id="decorCategories"></div>
+  <div id="decorGrid"></div>
+  <div id="decorActions">
+    <span id="decorHint">家具を選んで配置。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。</span>
+    <button id="decorDelete" type="button" disabled>🗑 削除</button>
+  </div>
 </div>
-
-<footer>移動: 十字キー / WASD / クリック（タップ）。<b>Shift か B でダッシュ</b>、キーをポンと押すと向きだけ変わるよ。おしゃべりはDiscordのボイスチャンネルと併用してね。</footer>
+<footer>移動: 十字キー/WASD/クリック（<b>ダブルクリックでワープ</b>）。Shift か B でダッシュ。椅子やソファに近づくと「座る」が出ます。おしゃべりはDiscordのボイスチャンネルと併用してね。
+Art: <a href="https://limezu.itch.io/moderninteriors" target="_blank" rel="noopener" style="color:#8ac8f8">Modern Interiors by LimeZu</a></footer>
 
 <div id="lightbox"><img id="lightboxImg"></div>
 <div id="toasts"></div>
@@ -153,13 +237,17 @@
 <div id="login">
   <div id="loginBox">
     <h2>🚢 うりぽん号メタ部屋へようこそ</h2>
-    <canvas id="preview" width="72" height="84"></canvas>
+    <canvas id="preview" width="288" height="336"></canvas>
     <input id="nameInput" type="text" maxlength="16" placeholder="なまえ（ニックネーム）">
-    <div class="optRow"><span class="lbl">かみがた</span><span id="hairStyles" class="optRow"></span></div>
-    <div class="optRow"><span class="lbl">かみの色</span><span id="hairColors" class="optRow"></span></div>
-    <div class="optRow"><span class="lbl">あたま（かぶりもの）</span><span id="accs" class="optRow"></span></div>
-    <div class="optRow"><span class="lbl">トップス</span><span id="shirtColors" class="optRow"></span></div>
-    <div class="optRow"><span class="lbl">ボトムス</span><span id="pantsColors" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">キャラクター</span><span id="hairRow" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">髪の色</span><span id="hairColorRow" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">ヘアアクセサリー</span><span id="accessoryRow" class="optRow"></span></div>
+    <div id="accessorySideRow" class="optRow"><span class="lbl">つける位置</span><span class="optRow">
+      <button id="accessoryLeft" class="sideChoice" type="button">左につける</button>
+      <button id="accessoryRight" class="sideChoice" type="button">右につける</button>
+    </span></div>
+    <div class="optRow"><span class="lbl">トップス</span><span id="topRow" class="optRow"></span></div>
+    <div class="optRow"><span class="lbl">ボトムス</span><span id="bottomRow" class="optRow"></span></div>
     <button id="enterBtn">入室する</button>
     <div id="err"></div>
   </div>
@@ -168,493 +256,439 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="assets/map-data.js"></script>
+<script src="assets/parts-data.js"></script>
+<script src="assets/decor-data.js"></script>
 <script>
 'use strict';
 // ================= 基本設定 =================
-const S = 4, W = 640, H = 440;
-const SPEED = 62, DASH = 1.9;
+// マップ全体(ワールド座標・px) と 画面に見える範囲(ビューポート) を分ける。
+// ビューポートはプレイヤーを中心に追従する（カメラ）。
+const MD = window.MAP_DATA;
+const TILE = MD.tileSize;                      // 16
+const MAP_W = MD.mapW * TILE, MAP_H = MD.mapH * TILE;  // ワールド全体のpx (1280x960)
+let zoomIdx = -1;    // -1 = 「全体がぴったり収まる倍率」(=zoomLevelsの最後)からスタート
+let zoomLevels = [1]; // resizeCanvasで実サイズに応じて毎回作り直す（末尾は必ず「マップ全体が収まる倍率」）
+let S = 1, W = 480, H = 320;  // ビューポートのpx（resizeCanvasで実サイズに更新される）
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
-
-const HAIR_STYLES = ['ボブ', 'ロング', 'ツン', 'おだんご'];
-const HAIR_COLORS  = ['#4a2c14', '#1e1a22', '#8a5a2a', '#b8862e', '#8a4a5a', '#5a6a8a',
-  '#f070b0', '#e04848', '#4890e8', '#48c078', '#9868e0', '#40c8c8', '#e8e8f0', '#f0c040'];
-const ACCS = ['なし', '🐱ねこ耳', '🐰うさ耳', '🐻くま耳', '👒麦わら', '🧢キャップ', '🐸着ぐるみ'];
-const SHIRT_COLORS = ['#f2d049', '#e0607a', '#4f86dc', '#4cc27e', '#bc62dc', '#e0703c', '#3cc0c0', '#f0f0ee'];
-const PANTS_COLORS = ['#f6f4f0', '#3c3c46', '#5a3c2a', '#37548a', '#7a3c50', '#4a604a'];
-const O = '#241a10';
-
-// ================= ピクセル描画ヘルパー =================
-let g;
-function px(x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
-function outlineRect(x, y, w, h, c) { px(x - 1, y - 1, w + 2, h + 2, O); px(x, y, w, h, c); }
-function shade(hex, amt) {
-  const cl = v => Math.max(0, Math.min(255, v));
-  const n = parseInt(hex.slice(1), 16);
-  return `rgb(${cl((n >> 16) + amt)},${cl(((n >> 8) & 255) + amt)},${cl((n & 255) + amt)})`;
+// canvasの実ピクセル数を、実際に表示されている#stageのサイズに合わせる（固定の3:2比率をやめ、画面いっぱいに使う）
+function resizeCanvas() {
+  const r = document.getElementById('stage').getBoundingClientRect();
+  if (r.width < 10 || r.height < 10) return;
+  cv.width = Math.max(1, Math.round(r.width));
+  cv.height = Math.max(1, Math.round(r.height));
+  // マップ全体（1280x960）が必ず1段階は収まるよう、実際の画面サイズから「全体表示」倍率を毎回計算する
+  const sFit = Math.min(cv.width / MAP_W, cv.height / MAP_H);
+  zoomLevels = [3, 2, 1.5].filter(s => s > sFit);
+  zoomLevels.push(sFit);
+  if (zoomIdx < 0) zoomIdx = zoomLevels.length - 1;  // 初回は「全体表示」から開始
+  zoomIdx = Math.min(zoomIdx, zoomLevels.length - 1);
+  S = zoomLevels[zoomIdx];
+  W = cv.width / S; H = cv.height / S;
+}
+function applyZoom(idx) {
+  zoomIdx = Math.min(Math.max(idx, 0), zoomLevels.length - 1);
+  resizeCanvas();
+  if (decorMode) clampCameraToMap();
 }
 
-// ================= 家具パーツの描画 =================
-function fPiano(x, y) {
-  outlineRect(x, y, 30, 16, '#1e1a22'); px(x + 1, y + 1, 28, 5, '#38323e'); px(x + 2, y + 11, 24, 3, '#f0f0f0');
-  for (let i = 0; i < 8; i++) px(x + 4 + i * 3, y + 11, 1, 3, '#222');
+// ================= 画面サイズに合わせてゲーム画面を最大化 =================
+// ブラウザウィンドウの縦横どちらが狭くても、余白を最小限にして部屋を大きく表示する。
+function fitLayout() {
+  const main = document.getElementById('main');
+  const bar = document.getElementById('bar');
+  const header = document.querySelector('header');
+  if (window.innerWidth <= 760) {
+    main.style.width = ''; main.style.height = '';
+    bar.style.width = ''; header.style.width = '';
+    resizeCanvas();
+    return;
+  }
+  const footer = document.querySelector('footer');
+  const availW = window.innerWidth * 0.997;
+  // 先に幅を確定させてから高さを測る（バーは折り返す(flex-wrap)ので、幅が決まらないと正しい高さが分からない）
+  bar.style.width = availW + 'px';
+  header.style.width = availW + 'px';
+  const reservedH = header.offsetHeight + bar.offsetHeight + footer.offsetHeight + 14;
+  const availH = Math.max(200, window.innerHeight - reservedH);
+  main.style.width = availW + 'px';
+  main.style.height = availH + 'px';
+  resizeCanvas();
 }
-function fBar(x, y) {
-  outlineRect(x, y, 110, 14, '#6e4a28'); px(x, y, 110, 4, '#8a5f38'); px(x, y + 12, 110, 2, '#5a3a1e');
-  for (let i = 0; i < 4; i++) { px(x + 8 + i * 10, y - 4, 4, 6, '#d8b830'); px(x + 9 + i * 10, y - 6, 2, 3, '#888'); }
-  for (let i = 0; i < 5; i++) px(x + 56 + i * 8, y + 2, 4, 5, '#f0e8c8');
-  outlineRect(x + 92, y - 6, 14, 12, '#3a3a42'); px(x + 94, y - 4, 10, 5, '#e8e0d0');
-  for (let i = 0; i < 5; i++) outlineRect(x + 8 + i * 18, y + 20, 8, 6, '#c04848');
+window.addEventListener('resize', fitLayout);
+fitLayout();
+const SPEED = 56, DASH = 1.9;
+let camX = 0, camY = 0;   // カメラ左上のワールド座標
+function clampCameraToMap() {
+  camX = W >= MAP_W ? (MAP_W - W) / 2 : Math.min(Math.max(camX, 0), MAP_W - W);
+  camY = H >= MAP_H ? (MAP_H - H) / 2 : Math.min(Math.max(camY, 0), MAP_H - H);
 }
-function fCafeTable(x, y, c) {
-  g.fillStyle = c; g.beginPath(); g.ellipse(x + 6, y + 5, 15, 9, 0, 0, 7); g.fill();
-  g.fillStyle = 'rgba(0,0,0,.12)'; g.beginPath(); g.ellipse(x + 6, y + 7, 15, 7, 0, 0, 7); g.fill();
-  outlineRect(x, y, 12, 9, '#e8e0d0'); px(x, y, 12, 3, '#f4eee0');
-  px(x - 8, y + 2, 5, 5, '#f0f0f0'); px(x + 15, y + 2, 5, 5, '#f0f0f0');
+function updateCamera() {
+  // デコ中はユーザーが床をドラッグして決めた表示位置を維持する。
+  if (decorMode) { clampCameraToMap(); return; }
+  const cx = me ? me.x : MAP_W / 2, cy = me ? me.y : MAP_H / 2;
+  // ビューポートがマップとほぼ同じ/それより広い高さのときは、追従させず中央に固定する
+  // （わずかに足りないだけで追従させると、可動範囲が数十pxしかなく端が半端に切れて見えるため）
+  const MARGIN = 80;
+  camX = W >= MAP_W - MARGIN ? (MAP_W - W) / 2 : Math.min(Math.max(cx - W / 2, 0), MAP_W - W);
+  camY = H >= MAP_H - MARGIN ? (MAP_H - H) / 2 : Math.min(Math.max(cy - H / 2, 0), MAP_H - H);
 }
-function fBooth(x, y) {
-  g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x - 2, y + 22, 26, 5);
-  outlineRect(x, y, 22, 7, '#68a848'); px(x + 1, y + 1, 20, 2, '#80c060');
-  outlineRect(x, y + 19, 22, 7, '#68a848'); px(x + 1, y + 20, 20, 2, '#80c060');
-  outlineRect(x + 3, y + 9, 16, 8, '#e8e0d0'); px(x + 3, y + 9, 16, 3, '#f4eee0');
+
+
+// ================= キャラクターパーツ素材（共通ボディに、顔髪/トップス/ボトムスを重ね描き） =================
+const PD = window.PARTS_DATA;
+const DD = window.DECOR_DATA;
+const DECOR_BY_ID = Object.fromEntries(DD.items.map(item => [item.id, item]));
+const decorAtlas = new Image();
+let decorAtlasReady = false;
+decorAtlas.onload = () => { decorAtlasReady = true; queueMicrotask(refreshDecorGrid); };
+decorAtlas.src = DD.atlas;
+const PFW = PD.frameW, PFH = PD.frameH, PFPA = PD.framesPerAnim;
+const UIPFW = PD.uiFrameW, UIPFH = PD.uiFrameH;
+const PART_CATS = ['body', 'hair', 'top', 'bottom'];
+const SELECTABLE_PART_CATS = ['hair', 'accessory', 'top', 'bottom'];
+// 現在のトップスには手、ボトムスには脚・靴まで含まれるため、裸ボディを全身描くと
+// 歩行コマの脚の隙間から素足が見える。襟元に必要な上半身だけ残し、脚は描画しない。
+const PART_DRAW_ORDER = ['bottom', 'top', 'hair'];
+// ピンク上下はスカートのウエストがフーディー裾の前へ来る原画なので、このセットだけ順序を入れ替える。
+function partDrawOrder(avatar) {
+  return avatar.top === 'pink' && avatar.bottom === 'pink' ? ['top', 'bottom', 'tophand', 'hair'] : PART_DRAW_ORDER;
 }
-function fPodDesk(x, y) {
-  outlineRect(x, y, 40, 12, '#1a1a20');
-  px(x + 2, y + 2, 16, 8, '#2a6a9a'); px(x + 20, y + 2, 16, 8, '#2a6a9a');
-  px(x + 3, y + 3, 8, 2, '#8adcf8'); px(x + 21, y + 3, 8, 2, '#8adcf8');
-  fGamingChair(x + 4, y + 24); fGamingChair(x + 24, y + 24);
+const PART_LISTS = { body: PD.bodies, hair: PD.hairs, accessory: PD.accessories, top: PD.tops, bottom: PD.bottoms };
+const HAIR_COLOR_LIST = PD.hairColors;
+const PARTS_IMGS = { body: {}, hairback: {}, hair: {}, costumehair: {}, accessory: {}, top: {}, tophand: {}, bottom: {} };
+const PARTS_UI_IMGS = { body: {}, hairback: {}, hair: {}, costumehair: {}, accessory: {}, top: {}, tophand: {}, bottom: {} };
+const PARTS_ASSET_VERSION = '20260722-hood-face-v2';
+function hairAssetId(hairId, colorId) { return `${hairId}_${colorId || PD.defaultHairColor}`; }
+let partsImgsLoaded = 0, partsImgsTotal = 0;
+function loadPartsSprites(cb) {
+  const specs = [];
+  PART_CATS.forEach(cat => PART_LISTS[cat].forEach(o => {
+    if (cat === 'hair') HAIR_COLOR_LIST.forEach(color => {
+      specs.push([cat, o.id, color.id]);
+      specs.push(['costumehair', o.id, color.id]);
+      if (o.id === 'long_wavy_brown') specs.push(['hairback', o.id, color.id]);
+    });
+    else specs.push([cat, o.id, '']);
+  }));
+  PD.accessories.filter(o => o.id !== 'none').forEach(o => specs.push(['accessory', o.id, '']));
+  specs.push(['tophand', 'pink', '']);
+  partsImgsTotal = specs.length * 2;
+  const done = () => { partsImgsLoaded++; if (partsImgsLoaded === partsImgsTotal) cb(); };
+  specs.forEach(([cat, id, colorId]) => {
+    const assetId = (cat === 'hair' || cat === 'hairback' || cat === 'costumehair') ? hairAssetId(id, colorId) : id;
+    const im = new Image();
+    im.onload = () => { PARTS_IMGS[cat][assetId] = im; done(); };
+    im.onerror = done;
+    im.src = `assets/part_${cat}_${assetId}.png?v=${PARTS_ASSET_VERSION}`;
+    const ui = new Image();
+    ui.onload = () => { PARTS_UI_IMGS[cat][assetId] = ui; done(); };
+    ui.onerror = done;
+    ui.src = `assets/ui_part_${cat}_${assetId}.png?v=${PARTS_ASSET_VERSION}`;
+  });
 }
-function fGamingChair(x, y) {
-  outlineRect(x, y, 12, 6, '#2a2a32'); px(x + 1, y + 1, 10, 2, '#c04858');
-  outlineRect(x + 2, y - 6, 8, 6, '#2a2a32'); px(x + 3, y - 5, 6, 3, '#c04858');
+// 向きdirName・frame(0-2)のソース矩形を返す（歩き=3コマ巡回、待機=先頭コマ固定）。4パーツ共通の座標系。
+function frameRect(dirName, frameN, moving, frameW = PFW, frameH = PFH) {
+  const dirIdx = PD.dirOrder.indexOf(dirName);
+  const col = moving ? (((frameN % PFPA) + PFPA) % PFPA) : 0;
+  return { sx: col * frameW, sy: dirIdx * frameH };
 }
-function fPalm(x, y) {
-  px(x + 2, y - 2, 4, 16, '#8a6a3a'); px(x + 3, y - 2, 1, 16, '#a8854a');
-  g.fillStyle = '#3a9a4a';
-  for (const [dx, dy] of [[-6, -6], [6, -6], [-8, 0], [8, 0], [0, -10]]) {
-    g.beginPath(); g.ellipse(x + 4 + dx, y + dy, 8, 3.5, dx * .06, 0, 7); g.fill();
+
+function drawPartFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh) {
+  c2.drawImage(img, r.sx, r.sy, sourceW, sourceH, dx, dy, dw, dh);
+}
+function drawUpperBodyFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh) {
+  const cutoff = Math.round(sourceH * 46 / 60);
+  c2.drawImage(img, r.sx, r.sy, sourceW, cutoff, dx, dy, dw, dh * cutoff / sourceH);
+}
+
+function drawCostumeFaceFrame(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh) {
+  // 顔を含まない後ろ髪用。フード下から出る毛先だけを残す。
+  const visibleFromY = 24;
+  c2.save(); c2.beginPath();
+  c2.rect(dx, dy + visibleFromY * dh / PFH, dw, (PFH - visibleFromY) * dh / PFH);
+  c2.clip();
+  drawPartFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh);
+  c2.restore();
+}
+
+function validAccessorySide(side) { return side === 'right' ? 'right' : 'left'; }
+function accessoryOption(id) { return PD.accessories.find(option => option.id === id); }
+function isFullHeadAccessory(id) { return !!accessoryOption(id)?.fullHead; }
+function accessoryVisible(avatar, dir) {
+  if (isFullHeadAccessory(avatar.accessory)) return true;
+  const side = validAccessorySide(avatar.accessorySide);
+  // 正面で見た画面左はキャラクター自身の右側。横向きでは選択側と反対の向きで手前に見える。
+  const visibleSideDir = side === 'left' ? 'right' : 'left';
+  return !!avatar.accessory && avatar.accessory !== 'none' && dir !== 'up' && (dir === 'down' || dir === visibleSideDir);
+}
+function drawAccessoryFrame(c2, avatar, dir, r, dx, dy, dw, dh, ui = false) {
+  const accessoryId = avatar.accessory || 'none';
+  const side = validAccessorySide(avatar.accessorySide);
+  if (!accessoryVisible(avatar, dir)) return;
+  const img = (ui ? PARTS_UI_IMGS : PARTS_IMGS).accessory[accessoryId];
+  if (!img) return;
+  const sourceW = ui ? UIPFW : PFW, sourceH = ui ? UIPFH : PFH;
+  // 着ぐるみ頭は左右アンカーへ置く小物ではなく、歩行コマを持つフルフレーム素材。
+  if (isFullHeadAccessory(accessoryId)) {
+    drawPartFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh);
+    return;
+  }
+  const anchors = PD.accessoryAnchors[avatar.hair];
+  if (!anchors) return;
+  const point = dir === 'down' ? anchors.down[side] : anchors[dir];
+  if (!point) return;
+  const multiplier = ui ? 2 : 1;
+  const anchorX = point[0] * multiplier, anchorY = point[1] * multiplier;
+  const drawX = dx + (anchorX - img.width / 2) * dw / sourceW;
+  const drawY = dy + (anchorY - img.height / 2) * dh / sourceH;
+  const drawW = img.width * dw / sourceW, drawH = img.height * dh / sourceH;
+  const mirror = dir === 'down' ? side === 'right' : dir === 'right';
+  if (mirror) {
+    c2.save(); c2.translate(drawX + drawW, drawY); c2.scale(-1, 1);
+    c2.drawImage(img, 0, 0, drawW, drawH); c2.restore();
+  } else {
+    c2.drawImage(img, drawX, drawY, drawW, drawH);
   }
 }
-function fTv(x, y) { outlineRect(x, y, 30, 14, '#3a3a42'); px(x + 2, y + 2, 26, 10, '#4a90c8'); px(x + 4, y + 4, 10, 2, '#a8dcf0'); }
-function fShelf(x, y) {
-  outlineRect(x, y, 24, 18, '#8a5f38'); px(x, y, 24, 2, '#a8783e');
-  for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++)
-    px(x + 2 + i * 3.5, y + 3 + r * 8, 2.5, 6, ['#c05858', '#5878c0', '#58a058', '#c0a040', '#9058b0'][(i + r) % 5]);
-}
-function fBoard(x, y) {
-  outlineRect(x, y, 34, 14, '#a87848'); px(x + 2, y + 2, 30, 10, '#e8d8b0');
-  px(x + 5, y + 4, 9, 3, '#e88a8a'); px(x + 17, y + 5, 9, 3, '#8ab2e0'); px(x + 8, y + 9, 10, 3, '#a8d890');
-}
-function fPlant(x, y) {
-  outlineRect(x, y + 5, 10, 7, '#a86a3a'); px(x + 1, y + 6, 8, 2, '#c08048');
-  g.fillStyle = '#4a9a4a'; g.beginPath(); g.arc(x + 5, y + 1, 7, 0, 7); g.fill();
-  g.fillStyle = '#5ab45a'; g.beginPath(); g.arc(x + 3, y - 1, 4, 0, 7); g.fill();
-}
-function fSofaSet(x, y, c) {
-  g.fillStyle = 'rgba(0,0,0,.08)'; g.beginPath(); g.ellipse(x + 24, y + 16, 40, 17, 0, 0, 7); g.fill();
-  outlineRect(x, y, 48, 9, c); px(x, y, 48, 3, shade(c, 30));
-  outlineRect(x, y + 24, 48, 9, c); px(x, y + 24, 48, 3, shade(c, 30));
-  outlineRect(x + 14, y + 12, 20, 9, '#e8e0d0'); px(x + 14, y + 12, 20, 3, '#f4eee0');
-  px(x + 18, y + 14, 5, 4, '#c8e8f0'); px(x + 26, y + 14, 5, 4, '#f0d0a0');
-}
-function fThSofaV(x, y) { outlineRect(x, y, 12, 50, '#c04848'); px(x + 1, y + 1, 10, 48, '#d86060'); px(x + 1, y + 1, 4, 48, '#e87878'); }
-function fThSofaH(x, y) { outlineRect(x, y, 72, 12, '#c04848'); px(x + 1, y + 1, 70, 10, '#d86060'); px(x + 1, y + 1, 70, 4, '#e87878'); }
-function fThRug(x, y) {
-  g.fillStyle = '#4868b0'; g.beginPath(); g.ellipse(x + 34, y + 15, 34, 15, 0, 0, 7); g.fill();
-  g.fillStyle = '#6888c8'; g.beginPath(); g.ellipse(x + 34, y + 15, 22, 9, 0, 0, 7); g.fill();
-}
-function fThTable(x, y) {
-  outlineRect(x, y, 20, 10, '#e8e0d0'); px(x, y, 20, 4, '#f4eee0');
-  px(x + 4, y + 2, 5, 4, '#f0d0a0'); px(x + 12, y + 2, 5, 4, '#c8e8f0');
-}
-function fPopcorn(x, y) {
-  outlineRect(x, y, 14, 20, '#d84848'); px(x + 2, y + 2, 10, 8, '#f8f0d8'); px(x + 4, y + 4, 6, 4, '#f0d048');
-  px(x + 2, y + 12, 10, 2, '#f0f0f0');
-}
-function fTansu(x, y) {
-  outlineRect(x, y, 36, 18, '#8a5f38'); px(x + 2, y + 2, 32, 6, '#a8783e'); px(x + 2, y + 10, 32, 6, '#a8783e');
-  px(x + 14, y + 4, 5, 1, '#e8c060'); px(x + 14, y + 12, 5, 1, '#e8c060');
-}
-function fRedTable(x, y) {
-  outlineRect(x, y, 48, 32, '#b04040'); px(x + 2, y + 2, 44, 28, '#c85050'); px(x + 4, y + 4, 40, 4, '#d86868');
-  px(x + 14, y + 10, 18, 12, '#e8dcb8'); px(x + 18, y + 13, 5, 4, '#c8e8f0'); px(x + 26, y + 13, 5, 4, '#f0a030');
-  fCushion(x - 20, y + 10); fCushion(x + 54, y + 10); fCushion(x + 16, y - 14); fCushion(x + 16, y + 38);
-}
-function fHearth(x, y) {
-  outlineRect(x, y, 36, 28, '#c04858'); px(x + 2, y + 2, 32, 24, '#d86878');
-  outlineRect(x + 6, y + 6, 24, 14, '#e8dcb8'); px(x + 8, y + 8, 20, 3, '#f4ecd0');
-  px(x + 12, y + 11, 7, 6, '#f0a030'); px(x + 14, y + 10, 2, 2, '#4a7a3a'); px(x + 22, y + 12, 5, 4, '#c8e8f0');
-  fCushion(x - 18, y + 8); fCushion(x + 42, y + 8);
-}
-function fCushion(x, y) { outlineRect(x, y, 12, 9, '#9060a8'); px(x + 1, y + 1, 10, 3, '#a878c0'); }
-// デスク島（2列×3席＝6席・小物つき）
-function fIsland(x, y, c) {
-  g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x - 2, y + 40, 98, 5);
-  outlineRect(x, y, 94, 40, c);
-  px(x, y, 94, 3, shade(c, 25)); px(x, y + 38, 94, 2, shade(c, -35));
-  px(x, y + 19, 94, 2, shade(c, -35));
-  for (let i = 1; i < 3; i++) { px(x + i * 31, y, 1, 19, shade(c, -25)); px(x + i * 31, y + 21, 1, 19, shade(c, -25)); }
-  const clutter = ['mug', 'plant', 'cake', 'books'];
-  for (let row = 0; row < 2; row++) {
-    const ry = y + 2 + row * 21;
-    for (let i = 0; i < 3; i++) {
-      const dx = x + 2 + i * 31;
-      outlineRect(dx + 2, ry + 1, 12, 8, '#2a2a32'); px(dx + 3, ry + 2, 10, 5, '#9adcf0'); px(dx + 3, ry + 2, 10, 2, '#c8ecf8');
-      px(dx + 16, ry + 6, 8, 4, '#e8e8e8'); px(dx + 17, ry + 7, 6, 2, '#d0d0d0');
-      const cl = clutter[(i + row * 2) % 4];
-      if (cl === 'mug') { px(dx + 25, ry + 2, 4, 5, '#f0f0f0'); px(dx + 26, ry + 3, 2, 2, '#8a5a2a'); }
-      else if (cl === 'plant') { px(dx + 25, ry + 4, 4, 4, '#a86a3a'); px(dx + 25, ry + 1, 4, 3, '#58a858'); }
-      else if (cl === 'cake') { px(dx + 25, ry + 3, 5, 4, '#f0c0d0'); px(dx + 25, ry + 2, 5, 1, '#f8f0f0'); px(dx + 27, ry + 1, 1, 1, '#e04848'); }
-      else { px(dx + 25, ry + 5, 5, 2, '#c05858'); px(dx + 25, ry + 3, 5, 2, '#5878c0'); px(dx + 25, ry + 1, 5, 2, '#58a058'); }
-    }
-  }
-  for (let i = 0; i < 3; i++) { fChair(x + 10 + i * 31, y - 9); fChair(x + 10 + i * 31, y + 44); }
-}
-function fChair(x, y) { outlineRect(x, y, 10, 7, '#3a3a44'); px(x + 1, y + 1, 8, 3, '#5a5a68'); }
-function fVending(x, y) {
-  outlineRect(x, y, 16, 26, '#d84848'); px(x + 2, y + 2, 12, 12, '#f0f0f0');
-  for (let i = 0; i < 3; i++) px(x + 3 + i * 4, y + 4, 3, 4, ['#e8a030', '#4a90c8', '#8ac88a'][i]);
-  px(x + 2, y + 17, 8, 5, '#333');
-}
-function fCatTower(x, y) {
-  px(x + 6, y + 10, 3, 14, '#c8b090'); outlineRect(x + 2, y + 4, 12, 6, '#a89070');
-  outlineRect(x + 4, y - 4, 8, 5, '#a89070');
-  px(x + 5, y - 7, 6, 4, '#e8a860'); px(x + 5, y - 9, 2, 2, '#e8a860'); px(x + 9, y - 9, 2, 2, '#e8a860');
-  px(x + 6, y - 6, 1, 1, '#222'); px(x + 9, y - 6, 1, 1, '#222');
-}
-function fWboard(x, y) {
-  outlineRect(x, y, 48, 12, '#e8e8e8'); px(x + 2, y + 2, 44, 8, '#f8f8f8');
-  px(x + 5, y + 4, 16, 2, '#8ab2e0'); px(x + 5, y + 8, 24, 1, '#c0c8d8');
-}
-function fMtable(x, y) {
-  outlineRect(x, y, 64, 26, '#e8e4dc'); px(x + 2, y + 2, 60, 6, '#f8f4ec');
-  fChair(x + 6, y - 9); fChair(x + 28, y - 9); fChair(x + 50, y - 9);
-  fChair(x + 6, y + 31); fChair(x + 28, y + 31); fChair(x + 50, y + 31);
-  fChair(x - 10, y + 7); fChair(x + 70, y + 7);
-}
-function fReadDesk(x, y) {
-  outlineRect(x, y, 52, 10, '#c8a878'); px(x + 2, y + 2, 48, 3, '#d8b888');
-  px(x + 8, y + 4, 9, 4, '#9adcf0'); px(x + 30, y + 4, 9, 4, '#9adcf0');
-  fChair(x + 6, y + 16); fChair(x + 32, y + 16);
-}
-function fBench(x, y) { outlineRect(x, y, 22, 7, '#a8784a'); px(x + 2, y + 1, 18, 3, '#c09060'); }
 
-// ================= 家具マスタ（基礎の間取り・全部動かせる） =================
-// bw/bh=当たり判定(0なら通り抜け可)、hw/hh=つまむ用の当たり(省略時はbw/bh)
-const FURN_TYPES = {
-  piano: { d: fPiano, bw: 30, bh: 16 }, bar: { d: fBar, bw: 110, bh: 14 },
-  cafeT: { d: fCafeTable, bw: 12, bh: 9 }, booth: { d: fBooth, bw: 22, bh: 26 },
-  podDesk: { d: fPodDesk, bw: 40, bh: 14 }, palm: { d: fPalm, bw: 10, bh: 14 },
-  tv: { d: fTv, bw: 30, bh: 14 }, shelf: { d: fShelf, bw: 24, bh: 18 }, board: { d: fBoard, bw: 34, bh: 14 },
-  plant: { d: fPlant, bw: 10, bh: 12 }, sofaSet: { d: fSofaSet, bw: 48, bh: 33 },
-  thSofaV: { d: fThSofaV, bw: 12, bh: 50 }, thSofaH: { d: fThSofaH, bw: 72, bh: 12 },
-  thRug: { d: fThRug, bw: 0, bh: 0, hw: 68, hh: 30 }, thTable: { d: fThTable, bw: 20, bh: 10 },
-  popcorn: { d: fPopcorn, bw: 14, bh: 20 }, tansu: { d: fTansu, bw: 36, bh: 18 },
-  redTable: { d: fRedTable, bw: 48, bh: 32 }, hearth: { d: fHearth, bw: 36, bh: 28 },
-  island: { d: fIsland, bw: 94, bh: 40 }, catTower: { d: fCatTower, bw: 16, bh: 20 },
-  vending: { d: fVending, bw: 16, bh: 26 }, wboard: { d: fWboard, bw: 48, bh: 12 },
-  mtable: { d: fMtable, bw: 64, bh: 26 }, readDesk: { d: fReadDesk, bw: 52, bh: 10 },
-  bench: { d: fBench, bw: 22, bh: 7 }, cushion: { d: fCushion, bw: 0, bh: 0, hw: 12, hh: 9 },
-};
-const FURN_DEFAULT = [
-  { id: 'piano', t: 'piano', x: 12, y: 34 }, { id: 'bar', t: 'bar', x: 48, y: 38 },
-  { id: 'cafeT1', t: 'cafeT', x: 42, y: 82, c: '#7ab2e0' }, { id: 'cafeT2', t: 'cafeT', x: 112, y: 82, c: '#e8c85a' },
-  { id: 'cafeT3', t: 'cafeT', x: 18, y: 114, c: '#8ac88a' }, { id: 'cafeT4', t: 'cafeT', x: 78, y: 114, c: '#e08a9a' },
-  { id: 'booth1', t: 'booth', x: 30, y: 152 }, { id: 'booth2', t: 'booth', x: 100, y: 152 }, { id: 'booth3', t: 'booth', x: 160, y: 152 },
-  { id: 'pod1', t: 'podDesk', x: 218, y: 26 }, { id: 'pod2', t: 'podDesk', x: 274, y: 26 },
-  { id: 'tv', t: 'tv', x: 338, y: 24 }, { id: 'shelfA', t: 'shelf', x: 378, y: 22 }, { id: 'shelfB', t: 'shelf', x: 406, y: 22 },
-  { id: 'board', t: 'board', x: 444, y: 24 }, { id: 'plantL', t: 'plant', x: 490, y: 24 },
-  { id: 'sofaG', t: 'sofaSet', x: 348, y: 50, c: '#88b858' }, { id: 'sofaY', t: 'sofaSet', x: 438, y: 50, c: '#e8b040' },
-  { id: 'sofaR', t: 'sofaSet', x: 348, y: 94, c: '#d86878' }, { id: 'sofaB', t: 'sofaSet', x: 438, y: 94, c: '#6890d8' },
-  { id: 'thRug', t: 'thRug', x: 546, y: 121 },
-  { id: 'thSofaV', t: 'thSofaV', x: 532, y: 80 }, { id: 'thSofaH', t: 'thSofaH', x: 540, y: 100 },
-  { id: 'thTable', t: 'thTable', x: 566, y: 128 }, { id: 'popcorn', t: 'popcorn', x: 610, y: 66 },
-  { id: 'tansu', t: 'tansu', x: 150, y: 206 }, { id: 'redTable', t: 'redTable', x: 40, y: 230 },
-  { id: 'hearth', t: 'hearth', x: 124, y: 272 },
-  { id: 'island1', t: 'island', x: 242, y: 170, c: '#b08050' }, { id: 'island2', t: 'island', x: 392, y: 170, c: '#b08050' },
-  { id: 'island3', t: 'island', x: 242, y: 300, c: '#c8a878' }, { id: 'island4', t: 'island', x: 392, y: 300, c: '#c8a878' },
-  { id: 'catTower', t: 'catTower', x: 216, y: 140 },
-  { id: 'vend1', t: 'vending', x: 496, y: 236 }, { id: 'vend2', t: 'vending', x: 496, y: 266 },
-  { id: 'bench', t: 'bench', x: 28, y: 352 },
-  { id: 'plant1', t: 'plant', x: 206, y: 122 }, { id: 'plant2', t: 'plant', x: 508, y: 420 },
-];
-let layout = {};              // Firebase上書き: id -> {x,y}
-let dragFurnId = null;        // ドラッグ中の家具（静的キャンバスから除いて手前描画）
-function furnPos(f) { const o = layout[f.id]; return o ? { x: o.x, y: o.y } : { x: f.x, y: f.y }; }
-
-// ================= 障害物（家具から動的に計算） =================
-let OBST = [];
-function rebuildObstacles() {
-  OBST = [[8, 392, 66, 20], [102, 392, 98, 20]];   // 川（橋x76〜100は通れる）
-  for (const f of FURN_DEFAULT) {
-    const t = FURN_TYPES[f.t];
-    if (!t.bw) continue;
-    const p = furnPos(f);
-    OBST.push([p.x, p.y, t.bw, t.bh]);
-  }
-}
+// ================= 障害物（Tiledマップの当たり判定グリッドを直接参照） =================
 function blockedAt(x, y) {
-  for (const r of OBST) if (x > r[0] && x < r[0] + r[2] && y > r[1] && y < r[1] + r[3]) return true;
-  return false;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  if (tx < 0 || ty < 0 || tx >= MD.mapW || ty >= MD.mapH) return true;
+  if (MD.blocked[ty * MD.mapW + tx] === 1) return true;
+  return decorBlocksPoint(x, y);
 }
 function tryMove(p, nx, ny) {
-  if (blockedAt(p.x, p.y)) { p.x = nx; p.y = ny; return true; }  // 家具の下敷きになったら脱出可能
+  if (blockedAt(p.x, p.y)) { p.x = nx; p.y = ny; return true; }  // 何かの下敷きになったら脱出可能
   if (!blockedAt(nx, ny)) { p.x = nx; p.y = ny; return true; }
   if (!blockedAt(nx, p.y)) { p.x = nx; return true; }
   if (!blockedAt(p.x, ny)) { p.y = ny; return true; }
   return false;
 }
 
-// ================= 部屋の背景（床・壁・川など固定部分＋家具） =================
+// ================= 部屋の背景（Tiledで作成したマップをタイル画像から描画） =================
+// LimeZu「Modern Interiors」「Modern Office」使用。マップはうりぽん作成（Tiled）。
 const room = document.createElement('canvas');
-room.width = W * S; room.height = H * S;
-function buildRoom() {
-  g = room.getContext('2d'); g.imageSmoothingEnabled = false;
-  g.clearRect(0, 0, room.width, room.height);
-  g.save(); g.scale(S, S);
-  // 石畳
-  for (let y = 0; y < H; y += 8) for (let x = -8; x < W; x += 16) {
-    const off = (y / 8) % 2 ? 8 : 0;
-    px(x + off, y, 16, 8, (Math.floor(x / 16) + y / 8) % 2 ? '#b0aab8' : '#a6a0ae');
-    px(x + off, y + 7, 16, 1, '#928c9e');
-  }
-  // 外壁と窓
-  px(0, 0, W, 14, '#7a687e'); px(0, 14, W, 4, '#584a5e'); px(0, 18, W, 2, 'rgba(0,0,0,.15)');
-  for (let i = 0; i < 7; i++) {
-    px(30 + i * 88, 2, 26, 10, O); px(31 + i * 88, 3, 24, 8, '#9adcf0');
-    px(31 + i * 88, 3, 24, 3, '#c8ecf8'); px(42 + i * 88, 3, 2, 8, O);
-  }
-  // カフェ床（パーケット＋レンガ）
-  for (let y = 20; y < 192; y += 6) for (let x = 6; x < 202; x += 6)
-    px(x, y, 6, 6, (x / 6 + y / 6) % 2 ? '#d2b488' : '#c8aa7e');
-  for (let x = 6; x < 202; x += 12) { px(x, 20, 11, 5, '#a0522d'); px(x + 6, 25, 11, 5, '#a0522d'); px(x, 25, 5, 5, '#8b4226'); }
-  // ポッド床
-  for (const bx of [212, 268]) {
-    px(bx, 20, 52, 60, '#565662');
-    for (let y = 20; y < 80; y += 6) for (let x = bx; x < bx + 52; x += 6)
-      if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.04)');
-    px(bx, 20, 1, 60, '#3c3c46'); px(bx + 51, 20, 1, 60, '#3c3c46');
-  }
-  // ラウンジ床
-  px(330, 20, 190, 132, '#e8d090');
-  for (let y = 22; y < 152; y += 8) px(330, y, 190, 1, 'rgba(0,0,0,.04)');
-  // シアター床＋大画面（7th上映中・会議室ぶん拡張して大きなシアターに）
-  px(526, 20, 106, 220, '#2c2838');
-  for (let y = 20; y < 240; y += 6) for (let x = 526; x < 632; x += 6)
-    if ((x / 6 + y / 6) % 2) px(x, y, 6, 6, 'rgba(255,255,255,.03)');
-  outlineRect(532, 24, 92, 44, '#101018');
-  px(534, 26, 88, 40, '#181828'); px(536, 28, 84, 3, 'rgba(255,255,255,.06)');
-  g.font = 'bold 26px sans-serif'; g.textAlign = 'center';
-  g.fillStyle = '#6a58c8'; g.fillText('7th', 579, 55);
-  g.fillStyle = '#f0eaff'; g.fillText('7th', 578, 54);
-  g.textAlign = 'left';
-  px(540, 32, 3, 3, '#f8e880'); px(612, 56, 3, 3, '#f8e880'); px(600, 34, 2, 2, '#a8c8f8');
-  px(534, 62, 88, 3, 'rgba(255,200,120,.15)');
-  // 和室床
-  px(8, 200, 194, 132, '#a8c088');
-  for (let ty = 200; ty < 332; ty += 33) for (let tx = 8; tx < 202; tx += 97) {
-    px(tx, ty, 97, 33, ((tx + ty) / 33) % 2 ? '#a8c088' : '#9cb47c');
-    g.strokeStyle = '#7e985e'; g.lineWidth = 1; g.strokeRect(tx + .5, ty + .5, 97, 33);
-  }
-  px(8, 200, 194, 2, '#8a6238'); px(8, 330, 194, 2, '#8a6238');
-  // もくもくエリア床（会議室・図書室ぶん右下へ拡張）
-  px(206, 116, 314, 128, '#d8d4dc');
-  px(206, 244, 426, 188, '#d8d4dc');
-  for (let y = 116; y < 432; y += 10) px(206, y, y < 244 ? 314 : 426, 1, 'rgba(0,0,0,.05)');
-  px(206, 116, 1, 316, '#b8b2c0');
-  px(330, 416, 52, 6, '#4868b0'); px(332, 417, 48, 4, '#5878c0');
-  // 「とにかくやれ」フロアペイント（右端の空きスペース）
-  g.save();
-  g.font = 'bold 26px "Hiragino Maru Gothic ProN", sans-serif'; g.textAlign = 'center';
-  g.fillStyle = 'rgba(180,64,64,.22)'; g.fillRect(530, 262, 98, 88);
-  g.fillStyle = 'rgba(150,40,40,.85)';
-  g.fillText('とにかく', 579, 300);
-  g.fillText('や れ', 579, 336);
-  g.restore();
-  // おそと
-  px(8, 340, 194, 92, '#88b868');
-  for (let i = 0; i < 60; i++) {
-    const gx = 10 + (i * 37) % 190, gy = 342 + (i * 23) % 88;
-    px(gx, gy, 2, 2, i % 3 ? '#78a858' : '#98c878');
-  }
-  px(120, 340, 14, 52, '#d8cca8'); px(122, 342, 10, 48, '#e0d4b0');
-  px(8, 392, 194, 20, '#5890d8'); px(8, 392, 194, 3, '#78a8e8');
-  for (let i = 0; i < 13; i++) px(14 + i * 15, 398 + (i % 3), 6, 1, '#a8c8f0');
-  px(76, 388, 24, 26, '#a8784a'); px(76, 388, 24, 2, O); px(76, 412, 24, 2, O);
-  for (let i = 0; i < 5; i++) px(78 + i * 5, 390, 2, 22, '#c09060');
-  for (const [fx, fy] of [[16, 348], [34, 366], [166, 350], [186, 364], [20, 424], [180, 422], [60, 374], [148, 376]]) {
-    px(fx, fy, 3, 3, ['#f07890', '#f0d048', '#f0f0f0'][fx % 3]); px(fx + 1, fy + 1, 1, 1, '#f8e880');
-  }
-  // 家具（y順・ドラッグ中のものは除く）
-  const sorted = [...FURN_DEFAULT].sort((a, b) => (furnPos(a).y + (FURN_TYPES[a.t].bh || 0)) - (furnPos(b).y + (FURN_TYPES[b.t].bh || 0)));
-  for (const f of sorted) {
-    if (f.id === dragFurnId) continue;
-    const p = furnPos(f);
-    FURN_TYPES[f.t].d(p.x, p.y, f.c);
-  }
-  g.restore();
+room.width = MAP_W; room.height = MAP_H;
+const tileImgs = {};
+let tilesLoaded = 0;
+const neededImgs = [...new Set(MD.tilesets.map(t => t.img))];
+function loadTilesAndBuild() {
+  const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  neededImgs.forEach(src => {
+    const im = new Image();
+    im.onload = () => { tileImgs[src] = im; tilesLoaded++; if (tilesLoaded === neededImgs.length) fontsReady.then(buildRoom).catch(buildRoom); };
+    im.onerror = () => { tilesLoaded++; if (tilesLoaded === neededImgs.length) fontsReady.then(buildRoom).catch(buildRoom); };
+    im.src = src;
+  });
+}
+const SORTED_TILESETS = [...MD.tilesets].sort((a, b) => b.firstgid - a.firstgid);
+// GID1つ分のタイルを指定キャンバスContextのdx,dyに描画（反転/回転フラグ対応）。buildRoom()と着席時の椅子の再描画で共用。
+function drawGidTile(ctx2, raw, dx, dy) {
+  if (!raw) return;
+  const h = !!(raw & 0x80000000), v = !!(raw & 0x40000000), dgFlag = !!(raw & 0x20000000);
+  const gid = raw & 0x1FFFFFFF;
+  let ts = null;
+  for (const t of SORTED_TILESETS) if (gid >= t.firstgid) { ts = t; break; }
+  if (!ts) return;
+  const img = tileImgs[ts.img]; if (!img) return;
+  const lid = gid - ts.firstgid;
+  const sx = (lid % ts.cols) * TILE, sy = Math.floor(lid / ts.cols) * TILE;
+  if (!h && !v && !dgFlag) { ctx2.drawImage(img, sx, sy, TILE, TILE, dx, dy, TILE, TILE); return; }
+  ctx2.save(); ctx2.translate(dx + TILE / 2, dy + TILE / 2);
+  ctx2.scale(h ? -1 : 1, v ? -1 : 1);
+  if (dgFlag) ctx2.transform(0, 1, 1, 0, 0, 0);
+  ctx2.drawImage(img, sx, sy, TILE, TILE, -TILE / 2, -TILE / 2, TILE, TILE);
+  ctx2.restore();
+}
+// 椅子セルのtx,ty -> 見た目タイルGID（着席時に脚を隠すため上から再描画する）
+const CHAIR_TILE_MAP = {};
+for (const c of (MD.chairTiles || [])) CHAIR_TILE_MAP[c.ty * MD.mapW + c.tx] = c.gid;
+
+// ================= 着席ポイント =================
+// 椅子のタイル上に立っただけで体を隠さず、近くで「座る」を押した時だけ専用表示にする。
+const SEATS = [];
+const OFFICE_SEAT_COLUMNS = [24, 27, 30, 38, 41, 44, 52, 55, 58];
+const OFFICE_SEAT_ROWS = [31, 36, 42, 47];
+for (const tx of OFFICE_SEAT_COLUMNS) for (const bottomTy of OFFICE_SEAT_ROWS) {
+  const dir = (bottomTy === 31 || bottomTy === 42) ? 'down' : 'up';
+  SEATS.push({ id: `office_${tx}_${bottomTy}`, kind: 'office',
+    x: (tx + .5) * TILE, y: (bottomTy + .78) * TILE, dir,
+    // 後ろ向き着席は椅子の前景に胴体まで埋もれないよう、見た目だけ8px上へ戻す。
+    // 座標自体は変えないため、近接判定・他ユーザー同期・立ち上がり位置には影響しない。
+    avatarOffsetY: dir === 'up' ? -8 : 0,
+    // 正面向きの椅子は背もたれがキャラの後ろ。後ろ向きの席だけ座面を前へ戻す。
+    foreground: dir === 'up' ? [{ tx, ty: bottomTy }] : [] });
+}
+// モニタールームの横長ソファ。3人分を均等に置く。
+// 背もたれトップの横線（y=183）から下はソファを前景として描き直し、
+// 横線そのものもキャラクターより前へ出す。
+const SOFA_FOREGROUND_RECTS = [{ x: 67 * TILE, y: 183, width: 8 * TILE, height: 25 }];
+SEATS.push(
+  { id: 'monitor_sofa_left', kind: 'sofa', x: 1092, y: 195, dir: 'up', foreground: [], foregroundRects: SOFA_FOREGROUND_RECTS },
+  { id: 'monitor_sofa_center', kind: 'sofa', x: 1136, y: 195, dir: 'up', foreground: [], foregroundRects: SOFA_FOREGROUND_RECTS },
+  { id: 'monitor_sofa_right', kind: 'sofa', x: 1180, y: 195, dir: 'up', foreground: [], foregroundRects: SOFA_FOREGROUND_RECTS },
+);
+
+// ユーザー指定の赤枠23か所に、丸テーブル横の黄色い椅子2脚を追加。
+// 縦長ソファ1か所と2脚が入ったスツール枠2か所はそれぞれ2人座れるため、合計28席。
+const SIDE_SEAT_SPECS = [
+  // 上側ラウンジ：紫ラグ、小型対面席8席、青ラグ、赤ラグ。
+  ['lounge_purple_left', 347, 114, 'right'], ['lounge_purple_right', 453, 114, 'left'],
+  ['cafe_a_top_left', 568, 104, 'right'], ['cafe_a_top_right', 600, 104, 'left'],
+  ['cafe_a_bottom_left', 568, 136, 'right'], ['cafe_a_bottom_right', 600, 136, 'left'],
+  ['cafe_b_top_left', 680, 104, 'right'], ['cafe_b_top_right', 712, 104, 'left'],
+  ['cafe_b_bottom_left', 680, 136, 'right'], ['cafe_b_bottom_right', 712, 136, 'left'],
+  ['lounge_blue_left', 824, 114, 'right'], ['lounge_blue_right', 936, 114, 'left'],
+  ['lounge_red_left', 347, 240, 'right'], ['lounge_red_right', 453, 240, 'left'],
+  ['round_yellow_left', 824, 240, 'right'], ['round_yellow_right', 936, 240, 'left'],
+  // モニタールーム左の縦長ソファ（2席）。
+  ['monitor_side_sofa_top', 1048, 120, 'right'], ['monitor_side_sofa_bottom', 1048, 148, 'right'],
+  // 左下：会議テーブル、廊下ソファ両脇、室内ソファ両脇、丸スツール4脚。
+  ['meeting_left', 88, 544, 'right'], ['meeting_right', 184, 544, 'left'],
+  ['hall_sofa_left', 200, 672, 'right'], ['hall_sofa_right', 248, 672, 'left'],
+  ['small_lounge_left', 40, 696, 'right'], ['small_lounge_right', 88, 696, 'left'],
+  ['low_table_left_stool_top', 72, 728, 'left'], ['low_table_left_stool_bottom', 72, 752, 'left'],
+  ['low_table_right_stool_top', 120, 728, 'right'], ['low_table_right_stool_bottom', 120, 752, 'right'],
+];
+for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
+  // 上側ラウンジとモニタールームは椅子の奥行き分だけ開口側・下へ寄せる。
+  // 下側の和室と座布団は指定値自体が座面中心なので補正しない。
+  const needsDepthOffset = y < 300;
+  // 小型テーブル席は左右位置が元から座面中央なので、縦方向だけ補正する。
+  const isCafeSeat = id.startsWith('cafe_');
+  const isCafeTopSeat = isCafeSeat && id.includes('_top_');
+  const needsHorizontalOffset = needsDepthOffset && !id.startsWith('cafe_');
+  const seatX = x + (needsHorizontalOffset ? (dir === 'right' ? 6 : -6) : 0);
+  const seatY = y + (isCafeTopSeat ? 18 : isCafeSeat ? 0 : needsDepthOffset ? 10 : 0);
+  SEATS.push({ id, kind: 'side', x: seatX, y: seatY, dir, foreground: [] });
 }
 
-// ================= デコアイテム =================
-const DECO_ITEMS = [
-  ['🌿 観葉植物', (x, y) => fPlant(x - 5, y - 11)],
-  ['🌸 お花', (x, y) => {
-    px(x - 5, y - 3, 10, 3, '#78a858');
-    for (const [fx, fc] of [[-4, '#f07890'], [0, '#f0d048'], [3, '#f0f0f0']]) {
-      px(x + fx, y - 7, 3, 3, fc); px(x + fx + 1, y - 6, 1, 1, '#f8e880');
-    }
-  }],
-  ['🟣 クッション', (x, y) => fCushion(x - 6, y - 7)],
-  ['🔵 ラグ', (x, y) => {
-    g.fillStyle = '#6890d8'; g.beginPath(); g.ellipse(x, y, 14, 7, 0, 0, 7); g.fill();
-    g.fillStyle = '#88a8e0'; g.beginPath(); g.ellipse(x, y, 9, 4.5, 0, 0, 7); g.fill();
-  }],
-  ['🐱 ねこ', (x, y) => {
-    px(x - 4, y - 5, 8, 5, '#e8a860'); px(x - 4, y - 8, 4, 4, '#e8a860');
-    px(x - 4, y - 9, 1.5, 2, '#e8a860'); px(x - 1.5, y - 9, 1.5, 2, '#e8a860');
-    px(x - 3, y - 7, 1, 1, '#222'); px(x - 1, y - 7, 1, 1, '#222');
-    px(x + 4, y - 7, 2, 5, '#e8a860');
-  }],
-  ['📚 本棚', (x, y) => fShelf(x - 12, y - 17)],
-  ['💡 ランプ', (x, y) => {
-    g.fillStyle = 'rgba(255,230,140,.3)'; g.beginPath(); g.arc(x, y - 14, 8, 0, 7); g.fill();
-    px(x - 1, y - 12, 2, 12, '#5a5a68'); px(x - 3, y - 1, 6, 2, '#5a5a68');
-    px(x - 4, y - 17, 8, 6, '#f0d048'); px(x - 5, y - 12, 10, 1, '#e8b45a');
-  }],
-  ['🍰 ケーキ台', (x, y) => {
-    outlineRect(x - 6, y - 7, 12, 8, '#e8e0d0'); px(x - 6, y - 7, 12, 3, '#f4eee0');
-    px(x - 3, y - 11, 6, 4, '#f0c0d0'); px(x - 3, y - 12, 6, 1, '#f8f0f0'); px(x - 1, y - 13, 1, 1, '#e04848');
-  }],
-  ['🌵 サボテン', (x, y) => {
-    px(x - 4, y - 4, 8, 5, '#b06a3a'); px(x - 2, y - 14, 4, 10, '#48a048');
-    px(x - 5, y - 11, 3, 2, '#48a048'); px(x - 5, y - 13, 2, 3, '#48a048');
-    px(x + 2, y - 9, 3, 2, '#48a048'); px(x + 3, y - 11, 2, 3, '#48a048');
-    px(x - 1, y - 16, 2, 2, '#f07890');
-  }],
-  ['🧸 くま', (x, y) => {
-    px(x - 3, y - 6, 6, 6, '#a8764a'); px(x - 4, y - 11, 8, 6, '#a8764a');
-    px(x - 5, y - 12, 2, 2, '#a8764a'); px(x + 3, y - 12, 2, 2, '#a8764a');
-    px(x - 2, y - 9, 1, 1, '#222'); px(x + 1, y - 9, 1, 1, '#222'); px(x - .5, y - 8, 1, 1, '#5a3a1e');
-    px(x - 5, y - 5, 2, 3, '#a8764a'); px(x + 3, y - 5, 2, 3, '#a8764a');
-  }],
+// 会議室の追加座布団5席と、和室の座椅子1席。
+// 上側はテーブルへ向かって下向き、下側は上向き、座椅子は下向きで座る。
+const FLOOR_SEAT_SPECS = [
+  ['meeting_cushion_top_left', 104, 512, 'down'],
+  ['meeting_cushion_top_center', 136, 512, 'down'],
+  ['meeting_cushion_top_right', 168, 512, 'down'],
+  ['meeting_cushion_bottom_left', 120, 576, 'up'],
+  ['meeting_cushion_bottom_right', 152, 576, 'up'],
+  ['washitsu_zaisu_top', 64, 672, 'down'],
 ];
-const decos = {};
-let decoMode = false, decoSel = 0, decoDel = false;
+for (const [id, x, y, dir] of FLOOR_SEAT_SPECS) {
+  SEATS.push({ id, kind: 'floor', x, y, dir, foreground: [] });
+}
+const SEAT_BY_ID = Object.fromEntries(SEATS.map(seat => [seat.id, seat]));
+function nearestSeat(x, y, maxDistance = 30) {
+  let best = null, bestDistance = maxDistance;
+  for (const seat of SEATS) {
+    const distance = Math.hypot(seat.x - x, seat.y - y);
+    if (distance < bestDistance) { best = seat; bestDistance = distance; }
+  }
+  return best;
+}
+function seatedAt(p) { return p && p.sit ? SEAT_BY_ID[p.seatId] || null : null; }
+function drawSeatForeground(c2, seat) {
+  if (!seat) return;
+  for (const cell of seat.foreground) {
+    // 完成済みの部屋キャンバスから再描画することで、上層のタイルも含めた背もたれの見た目をそのまま保つ。
+    c2.drawImage(room, cell.tx * TILE, cell.ty * TILE, TILE, TILE,
+      cell.tx * TILE, cell.ty * TILE, TILE, TILE);
+  }
+  for (const rect of seat.foregroundRects || []) {
+    c2.drawImage(room, rect.x, rect.y, rect.width, rect.height,
+      rect.x, rect.y, rect.width, rect.height);
+  }
+}
+function buildRoom() {
+  const rg = room.getContext('2d'); rg.imageSmoothingEnabled = false;
+  rg.clearRect(0, 0, MAP_W, MAP_H);
+  for (const layer of MD.layers) {
+    const data = layer.data;
+    for (let i = 0; i < data.length; i++) {
+      const raw = data[i]; if (!raw) continue;
+      const dx = (i % MD.mapW) * TILE, dy = Math.floor(i / MD.mapW) * TILE;
+      drawGidTile(rg, raw, dx, dy);
+    }
+  }
+  // Tiledのテキストオブジェクト（「とにかくやれ！」「7th」など）を部屋キャンバスに描画
+  for (const t of (MD.texts || [])) {
+    const lines = String(t.text).split('\n');
+    const font = t.font || 'sans-serif';
+    rg.font = `${t.bold ? 'bold ' : ''}${t.size}px ${font}`;
+    rg.textBaseline = 'top';
+    rg.textAlign = t.halign === 'center' ? 'center' : (t.halign === 'right' ? 'right' : 'left');
+    const cx = t.halign === 'center' ? t.x + t.w / 2 : (t.halign === 'right' ? t.x + t.w : t.x);
+    // 行間はボックス/マップの縦幅に収まるよう自動調整（元データのpixelsizeだと画面外にはみ出るため）
+    const avail = Math.max(t.size, Math.min(t.h, MAP_H - t.y) - t.size * 0.2);
+    const lineH = lines.length > 1 ? avail / lines.length : 0;
+    rg.fillStyle = t.color;
+    lines.forEach((line, i) => {
+      const ly = t.y + i * lineH;
+      rg.fillText(line, cx, ly);
+    });
+  }
+}
+loadTilesAndBuild();
 
-// ================= アバター描画（0.5px整数格子・4方向・エモート） =================
+// ================= アバター描画（後ろ髪/ボトムス/トップス/顔髪を重ね描き） =================
+const CHAR_SCALE = 0.575;
 function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
   dir = dir || 'down';
   const dance = emote === 'dance', ssj = emote === 'ssj';
   if (dance) dir = ['down', 'right', 'up', 'left'][frame % 4];
   const bob = dance ? (frame % 2) * 1.5 : moving ? (frame % 2) : 0;
-  const hc0 = HAIR_COLORS[(av.hc || 0) % HAIR_COLORS.length];
-  const hc = ssj ? '#f8dc38' : hc0;
-  const sc = SHIRT_COLORS[(av.sc || 0) % SHIRT_COLORS.length];
-  const pc = PANTS_COLORS[(av.pc || 0) % PANTS_COLORS.length];
-  const hs = ssj ? 2 : (av.hs || 0) % HAIR_STYLES.length;
-  const ac = ssj ? 0 : (av.ac || 0) % ACCS.length;
-  const side = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
-  const s = side;
-  g = c2;
-  c2.fillStyle = 'rgba(0,0,0,.25)'; c2.beginPath(); c2.ellipse(lx, ly + 1, 6, 2.4, 0, 0, 7); c2.fill();
+  // 着席中の影は座面の下からはみ出すので描かない。
+  if (!av.sit) {
+    c2.fillStyle = 'rgba(0,0,0,.25)'; c2.beginPath(); c2.ellipse(lx, ly + 1, 6, 2.4, 0, 0, 7); c2.fill();
+  }
   if (ssj) {
     const gl = c2.createRadialGradient(lx, ly - 12, 2, lx, ly - 12, 16);
     gl.addColorStop(0, 'rgba(255,230,80,.55)'); gl.addColorStop(1, 'rgba(255,230,80,0)');
     c2.fillStyle = gl; c2.beginPath(); c2.ellipse(lx, ly - 12, 14, 18, 0, 0, 7); c2.fill();
   }
-  c2.save(); c2.scale(.5, .5);
-  const X = Math.round(lx * 2), B = Math.round((ly - bob) * 2);
-  const e1 = moving && !dance ? (frame % 2 ? 2 : 0) : 0;
-  const e2 = moving && !dance ? (frame % 2 ? 0 : 2) : 0;
-  px(X - 7, B - 14, 6, 14 - e1, O); px(X + 1, B - 14, 6, 14 - e2, O);
-  px(X - 6, B - 14, 4, 12 - e1, pc); px(X + 2, B - 14, 4, 12 - e2, pc);
-  px(X - 10, B - 32, 20, 20, O); px(X - 8, B - 30, 16, 16, sc); px(X - 8, B - 30, 16, 4, shade(sc, 35));
-  if (dance && s === 0) {
-    px(X - 13, B - 40, 4, 12, O); px(X + 9, B - 40, 4, 12, O);
-    px(X - 12, B - 39, 3, 10, sc); px(X + 10, B - 39, 3, 10, sc);
-  } else if (s === 0) {
-    px(X - 12, B - 28, 4, 12, O); px(X + 8, B - 28, 4, 12, O);
-    px(X - 11, B - 27, 3, 10, sc); px(X + 9, B - 27, 3, 10, sc);
-  } else {
-    px(X + s * 6 - 2, B - 28, 5, 12, O); px(X + s * 6 - 1, B - 27, 3, 10, sc);
-  }
-  px(X - 9, B - 50, 18, 18, O);
-  if (dir === 'up') {
-    px(X - 8, B - 49, 16, 16, hc); px(X - 8, B - 49, 16, 4, shade(hc, 25));
-  } else {
-    px(X - 8, B - 49, 16, 16, '#f6d0a8');
-    if (s === 0) {
-      px(X - 5, B - 43, 3, 4, '#2a2020'); px(X + 2, B - 43, 3, 4, '#2a2020');
-      px(X - 7, B - 39, 3, 2, '#f0a8a0'); px(X + 4, B - 39, 3, 2, '#f0a8a0');
-      px(X - 1, B - 38, 2, 2, '#c07060');
-    } else {
-      px(X + s * 4 - 1, B - 43, 3, 4, '#2a2020');
-      px(X + s * 1 - 1, B - 39, 3, 2, '#f0a8a0');
-      px(X + s * 7 - 1, B - 41, 2, 2, '#e0b088');
-      px(X - s * 8 - (s > 0 ? -2 : 2) - 3, B - 48, 6, 14, hc);
+  const moveLike = moving || dance;
+  const r = frameRect(dir, frame, moveLike);
+  const seat = seatedAt(av);
+  const dw = PFW * CHAR_SCALE, dh = PFH * CHAR_SCALE;
+  const dx = lx - dw / 2, dy = ly - dh - bob * CHAR_SCALE + (seat?.avatarOffsetY || 0);
+  const visibleHeight = Math.max(1, dh - (seat?.clipBottom || 0));
+  c2.save(); c2.beginPath(); c2.rect(dx, dy, dw, visibleHeight); c2.clip();
+  const upperBody = PARTS_IMGS.body[PD.defaultBody];
+  if (upperBody) drawUpperBodyFrame(c2, upperBody, r, PFW, PFH, dx, dy, dw, dh);
+  if (av.hair === 'long_wavy_brown') {
+    const backImg = PARTS_IMGS.hairback[hairAssetId(av.hair, av.hairColor)];
+    if (backImg) {
+      if (isFullHeadAccessory(av.accessory)) drawCostumeFaceFrame(c2, backImg, r, dir, PFW, PFH, dx, dy, dw, dh);
+      else drawPartFrame(c2, backImg, r, PFW, PFH, dx, dy, dw, dh);
     }
   }
-  px(X - 10, B - 52, 20, 7, O);
-  px(X - 9, B - 51, 18, 5, dir === 'up' ? shade(hc, 15) : hc);
-  if (hs === 0) {
-    px(X - 12, B - 50, 4, 18, O); px(X + 8, B - 50, 4, 18, O);
-    px(X - 11, B - 49, 3, 16, hc); px(X + 9, B - 49, 3, 16, hc);
-    px(X - 11, B - 35, 4, 3, O); px(X + 7, B - 35, 4, 3, O);
-    px(X - 10, B - 35, 3, 2, hc); px(X + 8, B - 35, 3, 2, hc);
-    if (dir === 'up') { px(X - 9, B - 49, 18, 14, hc); px(X - 9, B - 49, 18, 3, shade(hc, 25)); }
-  } else {
-    px(X - 10, B - 48, 3, 8, O); px(X + 7, B - 48, 3, 8, O);
-    px(X - 9, B - 48, 2, 7, hc); px(X + 7, B - 48, 2, 7, hc);
+  // 後ろ向きの髪は衣装より後ろへ置く。フード下から出る毛先だけを残す。
+  if (dir === 'up' && isFullHeadAccessory(av.accessory)) {
+    const backHead = PARTS_IMGS.costumehair[hairAssetId(av.hair, av.hairColor)];
+    if (backHead) drawPartFrame(c2, backHead, r, PFW, PFH, dx, dy, dw, dh);
   }
-  if (hs === 1) {
-    const bx = dir === 'up' ? 0 : -s * 2;
-    px(X - 12 + bx, B - 48, 4, 20, O); px(X + 8 + bx, B - 48, 4, 20, O);
-    px(X - 11 + bx, B - 47, 3, 18, hc); px(X + 9 + bx, B - 47, 2, 18, hc);
-  } else if (hs === 2 && ac === 0) {
-    const t = ssj ? 3 : 0;
-    px(X - 8, B - 56 - t, 4, 6 + t, O); px(X - 2, B - 58 - t, 4, 8 + t, O); px(X + 4, B - 56 - t, 4, 6 + t, O);
-    px(X - 7, B - 55 - t, 3, 5 + t, hc); px(X - 1, B - 57 - t, 3, 7 + t, hc); px(X + 5, B - 55 - t, 3, 5 + t, hc);
-  } else if (hs === 3 && ac === 0) {
-    px(X - 4, B - 59, 8, 8, O); px(X - 3, B - 58, 6, 6, hc);
-    px(X - 1, B - 61, 2, 3, '#e05a80');
+  for (const cat of partDrawOrder(av)) {
+    const partId = cat === 'tophand' ? av.top : av[cat];
+    const assetId = cat === 'hair' ? hairAssetId(partId, av.hairColor) : partId;
+    const source = cat === 'hair' && isFullHeadAccessory(av.accessory) ? PARTS_IMGS.costumehair : PARTS_IMGS[cat];
+    const img = source[assetId];
+    if (img) {
+      if (cat === 'hair' && isFullHeadAccessory(av.accessory)) {
+        if (dir !== 'up') drawPartFrame(c2, img, r, PFW, PFH, dx, dy, dw, dh);
+      }
+      else drawPartFrame(c2, img, r, PFW, PFH, dx, dy, dw, dh);
+    }
   }
-  if (ac === 1) {
-    catEar(X - 8, B - 51, -1, hc); catEar(X + 8, B - 51, 1, hc);
-  } else if (ac === 2) {
-    px(X - 7, B - 66, 5, 16, O); px(X + 2, B - 66, 5, 16, O);
-    px(X - 6, B - 65, 3, 14, '#f4f0ea'); px(X + 3, B - 65, 3, 14, '#f4f0ea');
-    px(X - 5, B - 62, 1, 10, '#f0b8c0'); px(X + 4, B - 62, 1, 10, '#f0b8c0');
-  } else if (ac === 3) {
-    fcirc(X - 8, B - 53, 5, O); fcirc(X + 8, B - 53, 5, O);
-    fcirc(X - 8, B - 53, 3, '#9a6a3a'); fcirc(X + 8, B - 53, 3, '#9a6a3a');
-    fcirc(X - 8, B - 53, 2, '#c89a60'); fcirc(X + 8, B - 53, 2, '#c89a60');
-  } else if (ac === 4) {
-    px(X - 14, B - 53, 28, 5, O); px(X - 13, B - 52, 26, 3, '#e8cc70');
-    px(X - 9, B - 60, 18, 9, O); px(X - 8, B - 59, 16, 7, '#e8cc70');
-    px(X - 8, B - 54, 16, 2, '#d05858');
-  } else if (ac === 5) {
-    px(X - 10, B - 57, 20, 7, O); px(X - 9, B - 56, 18, 5, '#4878c8');
-    if (dir !== 'up') { px(X - 11 + s * 6, B - 51, 12 + Math.abs(s) * 4, 3, O); px(X - 10 + s * 6, B - 50, 10 + Math.abs(s) * 4, 2, '#3868b8'); }
-  } else if (ac === 6) {
-    px(X - 11, B - 54, 22, 10, O); px(X - 10, B - 53, 20, 8, '#78c060');
-    px(X - 11, B - 46, 4, 12, O); px(X + 7, B - 46, 4, 12, O);
-    px(X - 10, B - 45, 2, 10, '#78c060'); px(X + 8, B - 45, 2, 10, '#78c060');
-    fcirc(X - 5, B - 55, 4, O); fcirc(X + 5, B - 55, 4, O);
-    fcirc(X - 5, B - 55, 3, '#f0f0e8'); fcirc(X + 5, B - 55, 3, '#f0f0e8');
-    px(X - 6, B - 56, 2, 2, '#222'); px(X + 4, B - 56, 2, 2, '#222');
-  }
-  if (ssj && frame % 2) {
-    px(X - 14, B - 40, 2, 6, '#fff8a0'); px(X + 12, B - 46, 2, 6, '#fff8a0');
-    px(X - 12, B - 56, 2, 4, '#fff8a0'); px(X + 10, B - 30, 2, 4, '#fff8a0');
-  }
+  drawAccessoryFrame(c2, av, dir, r, dx, dy, dw, dh);
   c2.restore();
-  function catEar(x, y, sgn, col) {
-    g.fillStyle = O; g.beginPath(); g.moveTo(x - 4 * sgn, y); g.lineTo(x + 3 * sgn, y); g.lineTo(x, y - 8); g.closePath(); g.fill();
-    g.fillStyle = col; g.beginPath(); g.moveTo(x - 2.5 * sgn, y - 1); g.lineTo(x + 1.5 * sgn, y - 1); g.lineTo(x, y - 6.5); g.closePath(); g.fill();
-    g.fillStyle = '#f0a8b0'; g.beginPath(); g.moveTo(x - 1.2 * sgn, y - 2); g.lineTo(x + .6 * sgn, y - 2); g.lineTo(x, y - 4.6); g.closePath(); g.fill();
+  if (ssj && frame % 2) {
+    c2.fillStyle = '#fff8a0';
+    c2.fillRect(dx - 3, dy + 8, 2, 6); c2.fillRect(dx + dw + 1, dy + 14, 2, 6);
+    c2.fillRect(dx + dw / 2 - 1, dy - 4, 2, 4);
   }
-  function fcirc(x, y, r, c) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
 }
 
 // ================= 状態 =================
@@ -662,6 +696,153 @@ let me = null;
 const others = {};
 const bubbles = {};
 let db = null, myRef = null, fbReady = false;
+const decorObjects = {};
+let decorMode = false;
+let decorCategory = 'all';
+let selectedDecorItem = null;
+let selectedDecorKey = null;
+let draggingDecorKey = null;
+let decorDragOffsetX = 0, decorDragOffsetY = 0;
+let decorPanning = false;
+let decorPanStartClientX = 0, decorPanStartClientY = 0;
+let decorPanStartCamX = 0, decorPanStartCamY = 0;
+
+function updateDecorCursor() {
+  if (!decorMode) { cv.style.cursor = 'pointer'; return; }
+  if (decorPanning || draggingDecorKey) cv.style.cursor = 'grabbing';
+  else cv.style.cursor = selectedDecorItem ? 'crosshair' : 'grab';
+}
+
+// ================= Modern Interiors デコ =================
+function decorMeta(object) { return object ? DECOR_BY_ID[object.id] : null; }
+function decorBounds(object) {
+  const meta = decorMeta(object);
+  if (!meta) return null;
+  return { left: object.x - meta.w / 2, top: object.y - meta.h, right: object.x + meta.w / 2, bottom: object.y };
+}
+function decorBlocksPoint(x, y) {
+  for (const object of Object.values(decorObjects)) {
+    const meta = decorMeta(object);
+    if (!meta || !meta.collides) continue;
+    const halfW = Math.max(4, meta.w * .34);
+    const footH = Math.max(5, Math.min(10, meta.h * .22));
+    if (x >= object.x - halfW && x <= object.x + halfW && y >= object.y - footH && y <= object.y + 2) return true;
+  }
+  return false;
+}
+function drawDecorObject(c2, object, selected = false) {
+  const meta = decorMeta(object);
+  if (!meta || !decorAtlasReady) return;
+  const left = Math.round(object.x - meta.w / 2), top = Math.round(object.y - meta.h);
+  c2.drawImage(decorAtlas, meta.sx, meta.sy, meta.w, meta.h, left, top, meta.w, meta.h);
+  if (selected) {
+    c2.save(); c2.strokeStyle = '#e8b45a'; c2.lineWidth = 1.5; c2.setLineDash([3, 2]);
+    c2.strokeRect(left - 2, top - 2, meta.w + 4, meta.h + 4); c2.restore();
+  }
+}
+function decorAt(x, y) {
+  return Object.entries(decorObjects)
+    .sort((a, b) => {
+      const aFront = decorMeta(a[1])?.layer === 'back' ? 0 : 1;
+      const bFront = decorMeta(b[1])?.layer === 'back' ? 0 : 1;
+      return bFront - aFront || b[1].y - a[1].y;
+    })
+    .find(([, object]) => {
+      const bounds = decorBounds(object);
+      return bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+    });
+}
+function normalizeDecorObject(key, raw) {
+  if (!raw || !DECOR_BY_ID[raw.id]) return null;
+  return { key, id: raw.id, x: Math.min(Math.max(Number(raw.x) || 0, 0), MAP_W),
+    y: Math.min(Math.max(Number(raw.y) || 0, 0), MAP_H), by: raw.by || '' };
+}
+function updateDecorActions() {
+  const hint = document.getElementById('decorHint');
+  const del = document.getElementById('decorDelete');
+  if (selectedDecorKey && decorObjects[selectedDecorKey]) {
+    hint.textContent = `${decorObjects[selectedDecorKey].id}を選択中。ドラッグで動かせます。`;
+    del.disabled = false;
+  } else if (selectedDecorItem) {
+    hint.textContent = `${selectedDecorItem}を部屋の好きな場所へ置いてください。`;
+    del.disabled = true;
+  } else {
+    hint.textContent = '家具を選んで配置。拡大中は床をつまんで画面移動、置いた家具はドラッグできます。';
+    del.disabled = true;
+  }
+  updateDecorCursor();
+}
+function refreshDecorCategories() {
+  const row = document.getElementById('decorCategories'); row.innerHTML = '';
+  DD.categories.forEach(category => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = category.label;
+    button.classList.toggle('active', category.id === decorCategory);
+    button.addEventListener('click', () => { decorCategory = category.id; refreshDecorCategories(); refreshDecorGrid(); });
+    row.appendChild(button);
+  });
+}
+function refreshDecorGrid() {
+  const grid = document.getElementById('decorGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  DD.items.filter(item => decorCategory === 'all' || item.category === decorCategory).forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'decorItem' + (selectedDecorItem === item.id ? ' selected' : '');
+    button.title = item.id; button.setAttribute('aria-label', item.id);
+    const thumb = document.createElement('canvas'); thumb.width = 48; thumb.height = 48;
+    if (decorAtlasReady) {
+      const tc = thumb.getContext('2d'); tc.imageSmoothingEnabled = false;
+      const scale = Math.max(1, Math.min(2, Math.floor(44 / Math.max(item.w, item.h))));
+      const dw = item.w * scale, dh = item.h * scale;
+      tc.drawImage(decorAtlas, item.sx, item.sy, item.w, item.h, (48 - dw) / 2, (48 - dh) / 2, dw, dh);
+    }
+    const id = document.createElement('span'); id.textContent = item.id;
+    button.appendChild(thumb); button.appendChild(id);
+    button.addEventListener('click', () => {
+      selectedDecorItem = item.id; selectedDecorKey = null;
+      refreshDecorGrid(); updateDecorActions();
+    });
+    grid.appendChild(button);
+  });
+}
+function setDecoMode(on) {
+  if (on && !me) { alert('入室してからデコしてね'); return; }
+  decorMode = !!on;
+  if (!decorMode) { draggingDecorKey = null; decorPanning = false; selectedDecorKey = null; }
+  const panel = document.getElementById('decorPanel');
+  panel.classList.toggle('open', decorMode); panel.setAttribute('aria-hidden', decorMode ? 'false' : 'true');
+  document.getElementById('decorBtn').classList.toggle('active', decorMode);
+  updateDecorActions();
+}
+function placeDecor(id, x, y) {
+  if (!DECOR_BY_ID[id]) return;
+  const payload = { id, x: Math.round(x), y: Math.round(y), by: me?.id || '', ts: Date.now() };
+  const key = 'd_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+  if (db) {
+    db.ref('rooms/main/decorV2/' + key).set(Object.assign({}, payload, { ts: firebase.database.ServerValue.TIMESTAMP }));
+  }
+  decorObjects[key] = Object.assign({ key }, payload);
+  selectedDecorKey = key; selectedDecorItem = null;
+  refreshDecorGrid(); updateDecorActions();
+}
+function persistDecorMove(key) {
+  const object = decorObjects[key];
+  if (!object || !db) return;
+  db.ref('rooms/main/decorV2/' + key).update({ x: Math.round(object.x), y: Math.round(object.y) });
+}
+function removeSelectedDecor() {
+  const key = selectedDecorKey;
+  if (!key || !decorObjects[key]) return;
+  delete decorObjects[key];
+  if (db) db.ref('rooms/main/decorV2/' + key).remove();
+  selectedDecorKey = null; updateDecorActions();
+}
+document.getElementById('decorBtn').addEventListener('click', () => setDecoMode(!decorMode));
+document.getElementById('decorClose').addEventListener('click', () => setDecoMode(false));
+document.getElementById('decorDelete').addEventListener('click', removeSelectedDecor);
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && decorMode) setDecoMode(false); });
+refreshDecorCategories(); refreshDecorGrid(); updateDecorActions();
 
 // ================= Discord通知 =================
 function notifyDiscord(text) {
@@ -672,12 +853,101 @@ function notifyDiscord(text) {
   }).catch(() => {});
 }
 
+// ================= チャットのブラウザ通知 =================
+// 権限要求はユーザー操作が必要なため、チャット見出しのボタンからのみ行う。
+const CHAT_NOTIFICATION_PREF = 'm3_chat_notifications';
+const notifiedChatKeys = new Set();
+let chatNotificationRegistrationPromise = null;
+function chatNotificationSupported() {
+  return typeof window.Notification === 'function';
+}
+function chatNotificationEnabled() {
+  return chatNotificationSupported() && window.Notification.permission === 'granted'
+    && localStorage.getItem(CHAT_NOTIFICATION_PREF) === '1';
+}
+function refreshChatNotificationButton() {
+  const button = document.getElementById('chatNotifyBtn');
+  if (!button) return;
+  const supported = chatNotificationSupported();
+  const denied = supported && window.Notification.permission === 'denied';
+  const enabled = chatNotificationEnabled();
+  button.disabled = !supported || denied;
+  button.classList.toggle('active', enabled);
+  button.setAttribute('aria-pressed', String(enabled));
+  button.textContent = !supported ? '🔕 非対応' : denied ? '🔕 拒否中' : enabled ? '🔔 ON' : '🔔 通知';
+  button.title = !supported ? 'このブラウザは通知に対応していません'
+    : denied ? 'ブラウザのサイト設定で通知を許可してください'
+    : enabled ? '新着チャットの通知はオンです（押すとオフ）'
+    : '新着チャットの通知をオンにする';
+}
+async function toggleChatNotifications() {
+  if (!chatNotificationSupported()) { toast('通知', 'このブラウザは通知に対応していません'); return; }
+  if (window.Notification.permission === 'denied') {
+    refreshChatNotificationButton(); toast('通知', 'サイト設定で通知を許可してください'); return;
+  }
+  if (window.Notification.permission === 'granted') {
+    const enable = !chatNotificationEnabled();
+    localStorage.setItem(CHAT_NOTIFICATION_PREF, enable ? '1' : '0');
+    refreshChatNotificationButton(); toast('通知', enable ? 'チャット通知をオンにしました' : 'チャット通知をオフにしました');
+    if (enable) showChatNotification('うりぽん号', '通知テストです👍', '', 'permission-test-' + Date.now());
+    return;
+  }
+  const permission = await window.Notification.requestPermission();
+  localStorage.setItem(CHAT_NOTIFICATION_PREF, permission === 'granted' ? '1' : '0');
+  refreshChatNotificationButton();
+  toast('通知', permission === 'granted' ? 'チャット通知をオンにしました' : '通知は許可されませんでした');
+  if (permission === 'granted') showChatNotification('うりぽん号', '通知テストです👍', '', 'permission-test-' + Date.now());
+}
+function getChatNotificationRegistration() {
+  if (!('serviceWorker' in navigator) || !window.isSecureContext) return Promise.resolve(null);
+  if (!chatNotificationRegistrationPromise) {
+    chatNotificationRegistrationPromise = navigator.serviceWorker.register('./chat-notification-sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .catch(error => { console.warn('通知用サービスワーカーの登録に失敗しました', error); return null; });
+  }
+  return chatNotificationRegistrationPromise;
+}
+function showDirectChatNotification(title, options) {
+  const notification = new window.Notification(title, options);
+  notification.onclick = () => {
+    window.focus(); document.getElementById('chatInput')?.focus(); notification.close?.();
+  };
+  return true;
+}
+function showChatNotification(name, text, img, key = '') {
+  if (!chatNotificationEnabled()) return false;
+  const title = `💬 ${name || 'メタ部屋'}`;
+  const options = {
+    body: text || (img ? '📷 画像が届きました' : '新しいチャットが届きました'),
+    tag: key ? `meta-room-chat-${key}` : 'meta-room-chat',
+  };
+  try {
+    if (!('serviceWorker' in navigator) || !window.isSecureContext) return showDirectChatNotification(title, options);
+    // Service WorkerのshowNotificationを優先し、モバイルやSafariでも届きやすくする。
+    getChatNotificationRegistration().then(registration => {
+      if (registration?.showNotification) return registration.showNotification(title, options);
+      return showDirectChatNotification(title, options);
+    }).catch(error => {
+      console.warn('チャット通知の表示に失敗しました', error);
+      toast('通知', '表示できません。ブラウザとOSの通知設定を確認してください');
+    });
+    return true;
+  } catch (error) {
+    console.warn('チャット通知の表示に失敗しました', error);
+    return false;
+  }
+}
+document.getElementById('chatNotifyBtn').addEventListener('click', toggleChatNotifications);
+refreshChatNotificationButton();
+
 // ================= Firebase =================
 function connect() {
   if (!fbReady) { firebase.initializeApp(window.FIREBASE_CONFIG); db = firebase.database(); fbReady = true; }
   myRef = db.ref('rooms/main/players/' + me.id);
-  const push = () => myRef.set({ name: me.name, hs: me.hs, hc: me.hc, sc: me.sc, pc: me.pc, ac: me.ac,
-    st: me.st, d: me.dir, em: me.em || '', emu: me.emu || 0,
+  const push = () => myRef.set({ name: me.name, bd: me.body, hr: me.hair, hc: me.hairColor,
+    ac: me.accessory, acs: me.accessorySide, tp: me.top, bt: me.bottom,
+    st: me.st, d: me.dir, em: me.em || '', emu: me.emu || 0, sl: !!me.sleep, sd: me.sleepDir || 'right',
+    si: !!me.sit, sid: me.seatId || '',
     x: Math.round(me.x), y: Math.round(me.y), tx: Math.round(me.tx), ty: Math.round(me.ty),
     ts: firebase.database.ServerValue.TIMESTAMP });
   myRef.onDisconnect().remove();
@@ -685,6 +955,16 @@ function connect() {
 
   if (connect.subscribed) return;
   connect.subscribed = true;
+  db.ref('rooms/main/decorV2').on('value', snap => {
+    const data = snap.val() || {};
+    for (const key of Object.keys(decorObjects)) delete decorObjects[key];
+    for (const [key, raw] of Object.entries(data)) {
+      const object = normalizeDecorObject(key, raw);
+      if (object) decorObjects[key] = object;
+    }
+    if (selectedDecorKey && !decorObjects[selectedDecorKey]) selectedDecorKey = null;
+    updateDecorActions();
+  });
   db.ref('rooms/main/players').on('value', snap => {
     const data = snap.val() || {};
     for (const id of Object.keys(others)) if (!data[id]) delete others[id];
@@ -693,24 +973,39 @@ function connect() {
       n++;
       if (me && id === me.id) continue;
       if (!others[id]) others[id] = { id, x: p.x, y: p.y };
-      Object.assign(others[id], { name: p.name, hs: p.hs || 0, hc: p.hc || 0, sc: p.sc || 0, pc: p.pc || 0,
-        ac: p.ac || 0, st: p.st || 'work', dir: p.d || 'down', em: p.em || '', emu: p.emu || 0, tx: p.tx, ty: p.ty });
+      Object.assign(others[id], { name: p.name,
+        body: PD.defaultBody, hair: validPartId('hair', p.hr), hairColor: validHairColor(p.hc),
+        accessory: validPartId('accessory', p.ac), accessorySide: validAccessorySide(p.acs),
+        top: validPartId('top', p.tp), bottom: validPartId('bottom', p.bt),
+        st: p.st || 'work', dir: p.d || 'down', em: p.em || '', emu: p.emu || 0,
+        sleep: !!p.sl, sleepDir: p.sd || 'right', sit: !!p.si, seatId: p.sid || '', tx: p.tx, ty: p.ty });
       if (Math.hypot(others[id].x - p.x, others[id].y - p.y) > 80) { others[id].x = p.x; others[id].y = p.y; }
     }
-    document.getElementById('online').textContent = me ? `🟢 いま ${n} 人がオンライン` : `部屋には ${n} 人います`;
+    const names = Object.values(data).map(p => p.name).filter(Boolean);
+    const onlineEl = document.getElementById('online');
+    onlineEl.textContent = me ? `🟢 いま ${n} 人がオンライン` : `部屋には ${n} 人います`;
+    onlineEl.title = names.length ? 'オンライン中: ' + names.join('・') : '';
   });
   db.ref('rooms/main/chat').limitToLast(40).on('child_added', snap => {
     const m = snap.val(); if (!m) return;
-    addLog(m.n, m.t || '', m.ts, m.img);
-    const fresh = Date.now() - (m.ts || 0) < 15000;
+    const chatKey = snap.key || `${m.pid || ''}:${m.ts || ''}:${m.t || ''}`;
+    if (notifiedChatKeys.has(chatKey)) return;
+    notifiedChatKeys.add(chatKey);
+    if (notifiedChatKeys.size > 160) notifiedChatKeys.delete(notifiedChatKeys.values().next().value);
+    addLog(m.n, m.t || '', m.ts, m.img, m.pid || '', chatKey);
+    const age = Date.now() - Number(m.ts || 0);
+    const fresh = age >= -5000 && age < 15000;
     if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
-    if (fresh && (!me || m.pid !== me.id)) toast(m.n, m.t || '📷 画像');
+    if (fresh) {
+      // 検証期間中は自分の投稿もOS通知の対象にする。画面内トーストは他ユーザーのみ。
+      showChatNotification(m.n, m.t || '', m.img, chatKey);
+      if (!me || m.pid !== me.id) toast(m.n, m.t || '📷 画像');
+    }
   });
-  db.ref('rooms/main/deco').on('child_added', snap => { decos[snap.key] = snap.val(); });
-  db.ref('rooms/main/deco').on('child_removed', snap => { delete decos[snap.key]; });
-  db.ref('rooms/main/layout').on('value', snap => {
-    layout = snap.val() || {};
-    rebuildObstacles(); buildRoom();
+  db.ref('rooms/main/chat').on('child_removed', snap => {
+    const key = snap.key; if (!key) return;
+    notifiedChatKeys.delete(key);
+    document.querySelector(`#log .chat-row[data-chat-key="${CSS.escape(key)}"]`)?.remove();
   });
   watchScreen();
 }
@@ -726,9 +1021,10 @@ function linkify(el, text) {
   }
   el.appendChild(document.createTextNode(text.slice(last)));
 }
-function addLog(n, t, ts, img) {
+function addLog(n, t, ts, img, pid = '', key = '') {
   const log = document.getElementById('log');
-  const div = document.createElement('div');
+  const div = document.createElement('div'); div.className = 'chat-row';
+  if (key) div.dataset.chatKey = key;
   const d = new Date(ts || Date.now());
   const tm = document.createElement('span'); tm.className = 'tm';
   tm.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -743,8 +1039,25 @@ function addLog(n, t, ts, img) {
     });
     div.appendChild(im2);
   }
+  if (key && me) {
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'chat-delete';
+    del.textContent = '🗑'; del.title = 'このメッセージを削除'; del.setAttribute('aria-label', 'このメッセージを削除');
+    del.addEventListener('click', () => deleteChatMessage(key)); div.appendChild(del);
+  }
   log.appendChild(div); log.scrollTop = log.scrollHeight;
   while (log.children.length > 80) log.removeChild(log.firstChild);
+}
+async function deleteChatMessage(key) {
+  if (!db || !me || !key || !confirm('このメッセージを削除しますか？')) return false;
+  try {
+    const ref = db.ref('rooms/main/chat/' + key);
+    await ref.remove();
+    // child_removedが遅い場合でも、操作した本人の画面からはすぐ消す。
+    document.querySelector(`#log .chat-row[data-chat-key="${CSS.escape(key)}"]`)?.remove();
+    toast('削除', 'メッセージを削除しました'); return true;
+  } catch (error) {
+    console.warn('チャット削除に失敗しました', error); toast('削除', '削除できませんでした'); return false;
+  }
 }
 document.getElementById('lightbox').addEventListener('click', () => {
   document.getElementById('lightbox').style.display = 'none';
@@ -844,75 +1157,84 @@ function teardownViewer() {
   document.getElementById('shareVideo').srcObject = null;
 }
 document.getElementById('shareBtn').addEventListener('click', () => { shareStream ? stopShare() : startShare(); });
+document.getElementById('zoomOutBtn').addEventListener('click', () => applyZoom(zoomIdx + 1));
+document.getElementById('zoomInBtn').addEventListener('click', () => applyZoom(zoomIdx - 1));
 document.getElementById('shareClose').addEventListener('click', () => { document.getElementById('sharePane').style.display = 'none'; });
 
-// ================= 入力（クリック・十字キー・ダッシュ・デコ&家具ドラッグ） =================
-let drag = null;   // {kind:'deco',key,moved} | {kind:'furn',id,offx,offy}
+// ================= 入力（クリック・十字キー・ダッシュ） =================
 function evPos(e) {
   const r = cv.getBoundingClientRect();
-  return { lx: (e.clientX - r.left) / r.width * W, ly: (e.clientY - r.top) / r.height * H };
+  return {
+    lx: camX + (e.clientX - r.left) / r.width * W,
+    ly: camY + (e.clientY - r.top) / r.height * H,
+  };
 }
 cv.addEventListener('pointerdown', e => {
   if (!me) return;
   const { lx, ly } = evPos(e);
-  if (decoMode && db) {
-    cv.setPointerCapture(e.pointerId);
-    // 削除モード: デコのみ削除
-    if (decoDel) {
-      let bestK = null, bestD = 14;
-      for (const [k, d] of Object.entries(decos)) {
-        const dd = Math.hypot(d.x - lx, d.y - ly);
-        if (dd < bestD) { bestD = dd; bestK = k; }
-      }
-      if (bestK) db.ref('rooms/main/deco/' + bestK).remove();
-      return;
+  if (decorMode) {
+    e.preventDefault();
+    const hit = selectedDecorItem ? null : decorAt(lx, ly);
+    if (selectedDecorItem) {
+      placeDecor(selectedDecorItem, Math.min(Math.max(lx, 0), MAP_W), Math.min(Math.max(ly, 0), MAP_H));
+    } else if (hit) {
+      selectedDecorKey = hit[0]; selectedDecorItem = null; draggingDecorKey = hit[0];
+      decorDragOffsetX = hit[1].x - lx; decorDragOffsetY = hit[1].y - ly;
+      cv.setPointerCapture?.(e.pointerId);
+      refreshDecorGrid(); updateDecorActions();
+    } else {
+      selectedDecorKey = null;
+      decorPanning = true;
+      decorPanStartClientX = e.clientX; decorPanStartClientY = e.clientY;
+      decorPanStartCamX = camX; decorPanStartCamY = camY;
+      cv.setPointerCapture?.(e.pointerId);
+      updateDecorActions();
     }
-    // 1) デコをつまむ
-    let bestK = null, bestD = 12;
-    for (const [k, d] of Object.entries(decos)) {
-      const dd = Math.hypot(d.x - lx, d.y - ly);
-      if (dd < bestD) { bestD = dd; bestK = k; }
-    }
-    if (bestK) { drag = { kind: 'deco', key: bestK, moved: false }; return; }
-    // 2) 家具をつまむ（手前=リスト後方から判定）
-    for (let i = FURN_DEFAULT.length - 1; i >= 0; i--) {
-      const f = FURN_DEFAULT[i], t = FURN_TYPES[f.t], p = furnPos(f);
-      const w = t.bw || t.hw || 16, h = t.bh || t.hh || 12;
-      if (lx > p.x - 5 && lx < p.x + w + 5 && ly > p.y - 5 && ly < p.y + h + 5) {
-        drag = { kind: 'furn', id: f.id, offx: lx - p.x, offy: ly - p.y };
-        dragFurnId = f.id; buildRoom();
-        return;
-      }
-    }
-    // 3) 何もない床 → デコ設置
-    db.ref('rooms/main/deco').push({ t: decoSel, x: Math.round(lx), y: Math.round(ly) });
     return;
   }
-  me.tx = Math.min(Math.max(lx, 10), W - 10);
-  me.ty = Math.min(Math.max(ly, 30), H - 6);
+  standUp(false);
+  wakeUp();
+  me.tx = Math.min(Math.max(lx, 10), MAP_W - 10);
+  me.ty = Math.min(Math.max(ly, 10), MAP_H - 10);
   me.push && me.push();
 });
 cv.addEventListener('pointermove', e => {
-  if (!drag) return;
-  const { lx, ly } = evPos(e);
-  if (drag.kind === 'deco') {
-    const d = decos[drag.key];
-    if (d) { d.x = Math.round(lx); d.y = Math.round(ly); drag.moved = true; }
-  } else {
-    layout[drag.id] = { x: Math.round(lx - drag.offx), y: Math.round(ly - drag.offy) };
+  if (!decorMode) return;
+  if (draggingDecorKey && decorObjects[draggingDecorKey]) {
+    const { lx, ly } = evPos(e);
+    const object = decorObjects[draggingDecorKey];
+    object.x = Math.min(Math.max(lx + decorDragOffsetX, 0), MAP_W);
+    object.y = Math.min(Math.max(ly + decorDragOffsetY, 0), MAP_H);
+    return;
+  }
+  if (decorPanning) {
+    const r = cv.getBoundingClientRect();
+    camX = decorPanStartCamX - (e.clientX - decorPanStartClientX) / r.width * W;
+    camY = decorPanStartCamY - (e.clientY - decorPanStartClientY) / r.height * H;
+    clampCameraToMap();
   }
 });
-cv.addEventListener('pointerup', () => {
-  if (!drag || !db) { drag = null; return; }
-  if (drag.kind === 'deco') {
-    const d = decos[drag.key];
-    if (d && drag.moved) db.ref('rooms/main/deco/' + drag.key).set({ t: d.t, x: d.x, y: d.y });
-  } else {
-    const p = layout[drag.id];
-    if (p) db.ref('rooms/main/layout/' + drag.id).set({ x: p.x, y: p.y });
-    dragFurnId = null; rebuildObstacles(); buildRoom();
-  }
-  drag = null;
+function finishDecorPointer(e) {
+  if (draggingDecorKey) persistDecorMove(draggingDecorKey);
+  draggingDecorKey = null; decorPanning = false;
+  cv.releasePointerCapture?.(e.pointerId);
+  updateDecorCursor();
+}
+cv.addEventListener('pointerup', finishDecorPointer);
+cv.addEventListener('pointercancel', finishDecorPointer);
+// ダブルクリック/ダブルタップでその場所に瞬間移動（歩かずワープ）
+cv.addEventListener('dblclick', e => {
+  if (!me) return;
+  if (decorMode) { e.preventDefault(); return; }
+  const { lx, ly } = evPos(e);
+  const nx = Math.min(Math.max(lx, 10), MAP_W - 10), ny = Math.min(Math.max(ly, 10), MAP_H - 10);
+  if (blockedAt(nx, ny)) return;
+  standUp(false);
+  wakeUp();
+  spawnWarpEffect(me.x, me.y);
+  me.x = me.tx = nx; me.y = me.ty = ny;
+  spawnWarpEffect(nx, ny);
+  me.push && me.push();
 });
 const keys = {};
 const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
@@ -923,6 +1245,7 @@ window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const k = KEYMAP[e.key];
   if (!k) return;
+  if (k !== 'dash' && me?.sit) standUp(false);
   if (k !== 'dash' && me && !keys[k] && me.dir !== k) {
     me.dir = k; turnHold = performance.now() + 140;
     me.push && me.push();
@@ -941,11 +1264,12 @@ function keyMove(dt, now) {
   if (keys.up) vy -= 1; if (keys.down) vy += 1;
   if (keys.left) vx -= 1; if (keys.right) vx += 1;
   if (!vx && !vy) return false;
+  wakeUp();
   if (performance.now() < turnHold) { me.moving = false; return true; }
   const dd = Math.hypot(vx, vy);
   const sp = SPEED * (keys.dash ? DASH : 1);
-  const nx = Math.min(Math.max(me.x + vx / dd * sp * dt, 10), W - 10);
-  const ny = Math.min(Math.max(me.y + vy / dd * sp * dt, 30), H - 6);
+  const nx = Math.min(Math.max(me.x + vx / dd * sp * dt, 10), MAP_W - 10);
+  const ny = Math.min(Math.max(me.y + vy / dd * sp * dt, 10), MAP_H - 10);
   tryMove(me, nx, ny);
   me.tx = me.x; me.ty = me.y;
   me.moving = true;
@@ -961,16 +1285,62 @@ function sendChat() {
   db.ref('rooms/main/chat').push({ n: me.name, t, pid: me.id, ts: firebase.database.ServerValue.TIMESTAMP });
   inp.value = '';
 }
-// チャットログをMarkdownで保存（Firebaseから全履歴を取得）
-async function saveChatMd() {
+function formatChatDateValue(date) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function dayBoundsFromValue(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  if (startDate.getFullYear() !== year || startDate.getMonth() !== month - 1 || startDate.getDate() !== day) return null;
+  const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+  return { start: startDate.getTime(), end: endDate.getTime(), label: formatChatDateValue(startDate) };
+}
+function closeChatExport() {
+  const overlay = document.getElementById('chatExportOverlay');
+  overlay.classList.remove('open'); overlay.setAttribute('aria-hidden', 'true');
+}
+function openChatExport() {
+  if (!db) { alert('入室してから保存してね'); return; }
+  const today = formatChatDateValue(new Date());
+  document.getElementById('chatExportFrom').value = today;
+  document.getElementById('chatExportTo').value = today;
+  const overlay = document.getElementById('chatExportOverlay');
+  overlay.classList.add('open'); overlay.setAttribute('aria-hidden', 'false');
+}
+function saveChatDay(daysAgo) {
+  const date = new Date(); date.setDate(date.getDate() - daysAgo);
+  const bounds = dayBoundsFromValue(formatChatDateValue(date));
+  closeChatExport();
+  return saveChatMd(bounds.start, bounds.end, bounds.label);
+}
+function saveChatRangeFromInputs() {
+  const from = dayBoundsFromValue(document.getElementById('chatExportFrom').value);
+  const to = dayBoundsFromValue(document.getElementById('chatExportTo').value);
+  if (!from || !to) { alert('開始日と終了日を選んでね'); return; }
+  if (from.start > to.start) { alert('終了日は開始日以降にしてね'); return; }
+  const label = from.label === to.label ? from.label : `${from.label}〜${to.label}`;
+  closeChatExport();
+  return saveChatMd(from.start, to.end, label);
+}
+// チャットログをMarkdownで保存（Firebaseから履歴を取得し、指定期間だけ抽出）
+async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間') {
   if (!db) { alert('入室してから保存してね'); return; }
   const snap = await db.ref('rooms/main/chat').once('value');
   const msgs = [];
-  snap.forEach(s => { const m = s.val(); if (m && (m.t || m.img)) msgs.push(m); });
-  if (!msgs.length) { alert('まだチャットがありません'); return; }
+  snap.forEach(s => {
+    const m = s.val(); if (!m || (!m.t && !m.img)) return;
+    const ts = Number(m.ts) || 0;
+    if (startMs !== null && ts < startMs) return;
+    if (endMs !== null && ts > endMs) return;
+    msgs.push(m);
+  });
+  if (!msgs.length) { alert(`${rangeLabel}のチャットはありません`); return; }
   msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const pad = v => String(v).padStart(2, '0');
-  let md = '# うりぽん号メタ部屋 チャットログ\n\n';
+  let md = `# うりぽん号メタ部屋 チャットログ\n\n保存範囲: ${rangeLabel}\n\n`;
   let curDay = '';
   for (const m of msgs) {
     const d = new Date(m.ts || 0);
@@ -982,11 +1352,23 @@ async function saveChatMd() {
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `メタ部屋チャット_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.md`;
+  const fileRange = rangeLabel.replace(/〜/g, '_').replace(/[^0-9A-Za-z一-龠ぁ-んァ-ン_-]/g, '');
+  a.download = `メタ部屋チャット_${fileRange || formatChatDateValue(now)}.md`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
-document.getElementById('chatSaveBtn').addEventListener('click', saveChatMd);
+document.getElementById('chatSaveBtn').addEventListener('click', openChatExport);
+document.getElementById('chatExportClose').addEventListener('click', closeChatExport);
+document.getElementById('chatExportToday').addEventListener('click', () => saveChatDay(0));
+document.getElementById('chatExportYesterday').addEventListener('click', () => saveChatDay(1));
+document.getElementById('chatExportAll').addEventListener('click', () => { closeChatExport(); saveChatMd(); });
+document.getElementById('chatExportRange').addEventListener('click', saveChatRangeFromInputs);
+document.getElementById('chatExportOverlay').addEventListener('click', event => {
+  if (event.target.id === 'chatExportOverlay') closeChatExport();
+});
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('chatExportOverlay').classList.contains('open')) closeChatExport();
+});
 document.getElementById('sendBtn').addEventListener('click', sendChat);
 // 画像添付（800pxに縮小してJPEG化→チャットに載せる）
 document.getElementById('imgBtn').addEventListener('click', () => {
@@ -1036,6 +1418,56 @@ document.getElementById('stWork').addEventListener('click', () => {
   }
 });
 document.getElementById('stBreak').addEventListener('click', () => setStatus('break'));
+// ================= 椅子・ソファに座る =================
+const sitBtn = document.getElementById('sitBtn');
+function updateSitButton() {
+  if (!sitBtn) return;
+  const available = me && (me.sit || nearestSeat(me.x, me.y));
+  sitBtn.hidden = !available;
+  sitBtn.classList.toggle('active', !!me?.sit);
+  sitBtn.textContent = me?.sit ? '🧑 立つ' : '🪑 座る';
+}
+function standUp(push = true) {
+  if (!me?.sit) return false;
+  const seat = seatedAt(me);
+  me.sit = false; me.seatId = '';
+  // 座席内の固定位置に残さず、横向き席は開いている側、その他は下側へ立つ。
+  if (seat?.kind === 'side') me.x = Math.min(Math.max(me.x + (seat.dir === 'right' ? 18 : -18), 10), MAP_W - 10);
+  else me.y = Math.min(me.y + 10, MAP_H - 10);
+  me.tx = me.x; me.ty = me.y; me.moving = false;
+  updateSitButton();
+  if (push) me.push && me.push();
+  return true;
+}
+function toggleSit() {
+  if (!me) return;
+  if (me.sit) { standUp(); return; }
+  const seat = nearestSeat(me.x, me.y);
+  if (!seat) { updateSitButton(); return; }
+  wakeUp();
+  me.sit = true; me.seatId = seat.id;
+  me.x = me.tx = seat.x; me.y = me.ty = seat.y; me.moving = false;
+  // ソファは横を向いて座る操作もできる。上下向きで押した時は家具側の標準方向にする。
+  me.dir = seat.kind === 'sofa' && (me.dir === 'left' || me.dir === 'right') ? me.dir : seat.dir;
+  updateSitButton(); me.push && me.push();
+}
+sitBtn.addEventListener('click', toggleSit);
+// ================= 寝る（うりぽん号は床でもどこでも寝られる） =================
+function toggleSleep() {
+  if (!me) return;
+  if (!me.sleep) standUp(false);
+  me.sleep = !me.sleep;
+  if (me.sleep) {
+    // 横向き寝の向き（顔がどっちを向くか）は今向いている方向を引き継ぐ
+    me.sleepDir = (me.dir === 'left' || me.dir === 'right') ? me.dir : 'right';
+  }
+  document.getElementById('sleepBtn').classList.toggle('active', me.sleep);
+  me.push && me.push();
+}
+document.getElementById('sleepBtn').addEventListener('click', toggleSleep);
+function wakeUp() {
+  if (me && me.sleep) { me.sleep = false; document.getElementById('sleepBtn').classList.remove('active'); me.push && me.push(); }
+}
 document.getElementById('goHomeBtn').addEventListener('click', goHome);
 function goHome() {
   if (!me) return;
@@ -1063,98 +1495,170 @@ document.getElementById('dressBtn').addEventListener('click', () => {
   document.getElementById('enterBtn').textContent = 'これに着替える';
 });
 
-// ================= デコモードUI =================
-function setDecoMode(on) {
-  decoMode = on && !!me;
-  document.getElementById('decoBtn').classList.toggle('active', decoMode);
-  document.getElementById('decoBar').style.display = decoMode ? 'flex' : 'none';
+// ================= 入室UI（キャラクター/トップス/ボトムスを別々に選択） =================
+function validPartId(cat, id) {
+  return PART_LISTS[cat].some(part => part.id === id) ? id : PART_LISTS[cat][0].id;
 }
-document.getElementById('decoBtn').addEventListener('click', () => setDecoMode(!decoMode));
-document.getElementById('decoDone').addEventListener('click', () => setDecoMode(false));
-document.getElementById('decoDelBtn').addEventListener('click', () => {
-  decoDel = !decoDel;
-  document.getElementById('decoDelBtn').classList.toggle('sel', decoDel);
-});
-document.getElementById('decoResetBtn').addEventListener('click', () => {
-  if (db && confirm('家具を全部はじめの配置に戻す？（デコは残ります）')) db.ref('rooms/main/layout').remove();
-});
-const diWrap = document.getElementById('decoItems');
-DECO_ITEMS.forEach(([label], i) => {
-  const b = document.createElement('button');
-  b.className = 'dc' + (i === 0 ? ' sel' : ''); b.textContent = label;
-  b.addEventListener('click', () => {
-    decoSel = i; decoDel = false;
-    document.getElementById('decoDelBtn').classList.remove('sel');
-    [...diWrap.children].forEach((c, j) => c.classList.toggle('sel', j === i));
-  });
-  diWrap.appendChild(b);
-});
-
-// ================= 入室UI =================
+function validHairColor(id) {
+  return HAIR_COLOR_LIST.some(color => color.id === id) ? id : PD.defaultHairColor;
+}
 const av = {
-  hs: +(localStorage.getItem('m_hs') || 0), hc: +(localStorage.getItem('m_hc') || 0),
-  sc: +(localStorage.getItem('m_sc') || 0), pc: +(localStorage.getItem('m_pc') || 0),
-  ac: +(localStorage.getItem('m_ac') || 0),
+  body: PD.defaultBody,
+  hair: validPartId('hair', localStorage.getItem('m3_hair')),
+  hairColor: validHairColor(localStorage.getItem('m3_hair_color')),
+  accessory: validPartId('accessory', localStorage.getItem('m3_accessory')),
+  accessorySide: validAccessorySide(localStorage.getItem('m3_accessory_side')),
+  top: validPartId('top', localStorage.getItem('m3_top')),
+  bottom: validPartId('bottom', localStorage.getItem('m3_bottom')),
 };
-function optRow(elId, items, key, isColor) {
-  const el = document.getElementById(elId); el.innerHTML = '';
-  items.forEach((it, i) => {
-    const d = document.createElement(isColor ? 'div' : 'button');
-    d.className = (isColor ? 'sw' : 'hs') + (i === av[key] ? ' sel' : '');
-    if (isColor) d.style.background = it; else d.textContent = it;
-    d.addEventListener('click', () => {
-      av[key] = i;
-      [...el.children].forEach((c, j) => c.classList.toggle('sel', j === i));
-      drawPreview();
-    });
-    el.appendChild(d);
+const PART_ROW_EL = { hair: 'hairRow', accessory: 'accessoryRow', top: 'topRow', bottom: 'bottomRow' };
+// サムネイルは「今選んでいる他パーツ＋このオプション」を合成して見せる（組み合わせがそのまま分かるように）
+function makePartThumb(cat, id) {
+  const c = document.createElement('canvas');
+  c.width = 60; c.height = 84;
+  c.style.width = '30px'; c.style.height = '42px';
+  const cx = c.getContext('2d'); cx.imageSmoothingEnabled = true;
+  const tempAv = Object.assign({}, av, { [cat]: id });
+  const r = frameRect('down', 0, false, UIPFW, UIPFH);
+  const dh = c.height, dw = UIPFW * dh / UIPFH, dx = (c.width - dw) / 2;
+  const upperBody = PARTS_UI_IMGS.body[PD.defaultBody];
+  if (upperBody) drawUpperBodyFrame(cx, upperBody, r, UIPFW, UIPFH, dx, 0, dw, dh);
+  if (tempAv.hair === 'long_wavy_brown') {
+    const backImg = PARTS_UI_IMGS.hairback[hairAssetId(tempAv.hair, tempAv.hairColor)];
+    if (backImg) {
+      if (isFullHeadAccessory(tempAv.accessory)) drawCostumeFaceFrame(cx, backImg, r, 'down', UIPFW, UIPFH, dx, 0, dw, dh);
+      else drawPartFrame(cx, backImg, r, UIPFW, UIPFH, dx, 0, dw, dh);
+    }
+  }
+  for (const layer of partDrawOrder(tempAv)) {
+    const partId = layer === 'tophand' ? tempAv.top : tempAv[layer];
+    const assetId = layer === 'hair' ? hairAssetId(partId, tempAv.hairColor) : partId;
+    const source = layer === 'hair' && isFullHeadAccessory(tempAv.accessory) ? PARTS_UI_IMGS.costumehair : PARTS_UI_IMGS[layer];
+    const img = source[assetId];
+    if (img) {
+      if (layer === 'hair' && isFullHeadAccessory(tempAv.accessory)) drawPartFrame(cx, img, r, UIPFW, UIPFH, dx, 0, dw, dh);
+      else drawPartFrame(cx, img, r, UIPFW, UIPFH, dx, 0, dw, dh);
+    }
+  }
+  drawAccessoryFrame(cx, tempAv, 'down', r, dx, 0, dw, dh, true);
+  return c;
+}
+function refreshRow(cat) {
+  const el = document.getElementById(PART_ROW_EL[cat]); el.innerHTML = '';
+  PART_LISTS[cat].forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'thumb small' + (o.id === av[cat] ? ' sel' : '');
+    b.title = o.label || o.id; b.setAttribute('aria-label', o.label || o.id);
+    b.appendChild(makePartThumb(cat, o.id));
+    b.addEventListener('click', () => { av[cat] = o.id; drawPreview(); refreshAllRows(); });
+    el.appendChild(b);
   });
 }
-optRow('hairStyles', HAIR_STYLES, 'hs', false);
-optRow('hairColors', HAIR_COLORS, 'hc', true);
-optRow('accs', ACCS, 'ac', false);
-optRow('shirtColors', SHIRT_COLORS, 'sc', true);
-optRow('pantsColors', PANTS_COLORS, 'pc', true);
-const pcv = document.getElementById('preview');
-const pctx = pcv.getContext('2d'); pctx.imageSmoothingEnabled = false;
-function drawPreview() {
-  pctx.clearRect(0, 0, 72, 84);
-  pctx.save(); pctx.scale(2, 2);
-  drawAvatar(pctx, 18, 39, av, false, 0, 'down', '');
-  pctx.restore();
+function refreshAllRows() {
+  if (partsImgsLoaded < partsImgsTotal) return;
+  SELECTABLE_PART_CATS.forEach(refreshRow);
+  const el = document.getElementById('hairColorRow'); el.innerHTML = '';
+  HAIR_COLOR_LIST.forEach(color => {
+    const b = document.createElement('button');
+    b.className = 'colorChoice' + (color.id === av.hairColor ? ' sel' : '');
+    b.style.background = color.color; b.title = color.label; b.setAttribute('aria-label', color.label);
+    b.addEventListener('click', () => { av.hairColor = color.id; drawPreview(); refreshAllRows(); });
+    el.appendChild(b);
+  });
+  document.getElementById('accessoryLeft').classList.toggle('sel', av.accessorySide === 'left');
+  document.getElementById('accessoryRight').classList.toggle('sel', av.accessorySide === 'right');
+  const fixedHead = isFullHeadAccessory(av.accessory);
+  document.getElementById('accessorySideRow').hidden = fixedHead;
+  document.getElementById('accessoryLeft').disabled = fixedHead;
+  document.getElementById('accessoryRight').disabled = fixedHead;
 }
-drawPreview();
+const pcv = document.getElementById('preview');
+const pctx = pcv.getContext('2d'); pctx.imageSmoothingEnabled = true;
+function drawPreview() {
+  pctx.clearRect(0, 0, pcv.width, pcv.height);
+  pctx.fillStyle = 'rgba(0,0,0,.25)'; pctx.beginPath(); pctx.ellipse(144, 306, 32, 8, 0, 0, 7); pctx.fill();
+  const dh = 276, dw = UIPFW * dh / UIPFH, dx = (pcv.width - dw) / 2, dy = 304 - dh;
+  const r = frameRect('down', 0, false, UIPFW, UIPFH);
+  const upperBody = PARTS_UI_IMGS.body[PD.defaultBody];
+  if (upperBody) drawUpperBodyFrame(pctx, upperBody, r, UIPFW, UIPFH, dx, dy, dw, dh);
+  if (av.hair === 'long_wavy_brown') {
+    const backImg = PARTS_UI_IMGS.hairback[hairAssetId(av.hair, av.hairColor)];
+    if (backImg) {
+      if (isFullHeadAccessory(av.accessory)) drawCostumeFaceFrame(pctx, backImg, r, 'down', UIPFW, UIPFH, dx, dy, dw, dh);
+      else drawPartFrame(pctx, backImg, r, UIPFW, UIPFH, dx, dy, dw, dh);
+    }
+  }
+  for (const layer of partDrawOrder(av)) {
+    const partId = layer === 'tophand' ? av.top : av[layer];
+    const assetId = layer === 'hair' ? hairAssetId(partId, av.hairColor) : partId;
+    const source = layer === 'hair' && isFullHeadAccessory(av.accessory) ? PARTS_UI_IMGS.costumehair : PARTS_UI_IMGS[layer];
+    const img = source[assetId];
+    if (img) {
+      if (layer === 'hair' && isFullHeadAccessory(av.accessory)) drawPartFrame(pctx, img, r, UIPFW, UIPFH, dx, dy, dw, dh);
+      else drawPartFrame(pctx, img, r, UIPFW, UIPFH, dx, dy, dw, dh);
+    }
+  }
+  drawAccessoryFrame(pctx, av, 'down', r, dx, dy, dw, dh, true);
+  // 原画セル上端由来の微細なガイド線が見えないよう、キャラクターより上の安全領域を最後に消去する。
+  pctx.clearRect(0, 0, pcv.width, 50);
+}
+loadPartsSprites(() => { refreshAllRows(); drawPreview(); });
+['left', 'right'].forEach(side => document.getElementById(side === 'left' ? 'accessoryLeft' : 'accessoryRight').addEventListener('click', () => {
+  av.accessorySide = side; drawPreview(); refreshAllRows();
+}));
 document.getElementById('nameInput').value = localStorage.getItem('metaname') || '';
 document.getElementById('enterBtn').addEventListener('click', enter);
 document.getElementById('nameInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) enter();
 });
+function hasSavedAvatarProfile() {
+  const name = localStorage.getItem('metaname');
+  if (!name || !name.trim()) return false;
+  if (localStorage.getItem('m3_profile_ready') === '1') return true;
+  // 既存ユーザー向け: フラグ追加前に保存済みの着せ替え設定も初回設定済みとして扱う。
+  return ['m3_hair', 'm3_top', 'm3_bottom'].every(key => !!localStorage.getItem(key));
+}
 function enter() {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) { document.getElementById('err').textContent = 'なまえを入れてね'; return; }
   localStorage.setItem('metaname', name);
-  ['hs', 'hc', 'sc', 'pc', 'ac'].forEach(k => localStorage.setItem('m_' + k, av[k]));
+  localStorage.setItem('m3_hair', av.hair);
+  localStorage.setItem('m3_hair_color', av.hairColor);
+  localStorage.setItem('m3_accessory', av.accessory);
+  localStorage.setItem('m3_accessory_side', av.accessorySide);
+  localStorage.setItem('m3_top', av.top);
+  localStorage.setItem('m3_bottom', av.bottom);
+  localStorage.setItem('m3_profile_ready', '1');
   document.getElementById('login').style.display = 'none';
   if (me) {
-    Object.assign(me, { name, hs: av.hs, hc: av.hc, sc: av.sc, pc: av.pc, ac: av.ac });
+    Object.assign(me, { name, body: av.body, hair: av.hair, hairColor: av.hairColor,
+      accessory: av.accessory, accessorySide: av.accessorySide, top: av.top, bottom: av.bottom });
     me.push && me.push();
     return;
   }
   let id = sessionStorage.getItem('metaid');
   if (!id) { id = 'p' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('metaid', id); }
-  const sx = 336 + Math.random() * 40, sy = 418 + Math.random() * 8;
-  me = { id, name, hs: av.hs, hc: av.hc, sc: av.sc, pc: av.pc, ac: av.ac,
-    x: sx, y: sy, tx: sx, ty: sy, st: 'work', dir: 'down', em: '', emu: 0 };
+  const sx = 664 + Math.random() * 24 - 12, sy = 840 + Math.random() * 16 - 8;   // もくもくエリア手前の通路
+  me = { id, name, body: av.body, hair: av.hair, hairColor: av.hairColor,
+    accessory: av.accessory, accessorySide: av.accessorySide, top: av.top, bottom: av.bottom,
+    x: sx, y: sy, tx: sx, ty: sy, st: 'work', dir: 'down', em: '', emu: 0, sit: false, seatId: '' };
   document.getElementById('stWork').classList.add('active');
   document.getElementById('stBreak').classList.remove('active');
   try { connect(); } catch (e) { document.getElementById('online').textContent = '⚠ 接続エラー: ' + e.message; }
 }
 
+// アバター設定済みなら、次回以降は設定画面を経由せず保存済みの姿で入室する。
+if (hasSavedAvatarProfile()) enter();
+
 // ================= メインループ =================
-rebuildObstacles();
-buildRoom();
+// buildRoom() はタイル画像の読み込み完了後（loadTilesAndBuild内）に呼ばれる
 let last = performance.now();
 function step(p, dt) {
+  if (p.sit) {
+    const seat = seatedAt(p);
+    if (seat) { p.x = p.tx = seat.x; p.y = p.ty = seat.y; }
+    p.moving = false; return;
+  }
   const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
   p.moving = d > 1;
   if (p.moving) {
@@ -1170,8 +1674,6 @@ function step(p, dt) {
 }
 function loop(now) {
   const dt = Math.min((now - last) / 1000, .1); last = now;
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.drawImage(room, 0, 0);
   const frame = Math.floor(now / 150);
   const all = Object.values(others);
   if (me) {
@@ -1179,34 +1681,82 @@ function loop(now) {
     all.push(me);
   }
   for (const o of Object.values(others)) step(o, dt);
+  updateCamera();
+  updateSitButton();
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.save(); ctx.scale(S, S); ctx.translate(-camX, -camY);
+  ctx.drawImage(room, 0, 0);
+  const backDecor = Object.values(decorObjects)
+    .filter(object => decorMeta(object)?.layer === 'back')
+    .sort((a, b) => a.y - b.y);
+  for (const object of backDecor) drawDecorObject(ctx, object, decorMode && object.key === selectedDecorKey);
   const drawList = [];
-  for (const d of Object.values(decos)) drawList.push({ y: d.y, deco: d });
   for (const p of all) drawList.push({ y: p.y, p });
+  for (const object of Object.values(decorObjects)) {
+    if (decorMeta(object)?.layer !== 'back') drawList.push({ y: object.y, decor: object });
+  }
   drawList.sort((a, b) => a.y - b.y);
-  ctx.save(); ctx.scale(S, S);
-  g = ctx;
-  // ドラッグ中の家具はカーソル追従で手前描画
-  if (dragFurnId) {
-    const f = FURN_DEFAULT.find(f2 => f2.id === dragFurnId);
-    if (f) { const p = furnPos(f); FURN_TYPES[f.t].d(p.x, p.y, f.c); g = ctx; }
-  }
   for (const item of drawList) {
-    if (item.deco) { const fn = DECO_ITEMS[item.deco.t % DECO_ITEMS.length][1]; fn(item.deco.x, item.deco.y); g = ctx; }
-    else {
-      const p = item.p;
-      const em = p.emu > Date.now() ? p.em : '';
-      drawAvatar(ctx, p.x, p.y, p, p.moving, frame, p.dir, em);
+    if (item.decor) {
+      drawDecorObject(ctx, item.decor, decorMode && item.decor.key === selectedDecorKey);
+      continue;
     }
+    const p = item.p;
+    if (p.sleep) { drawSleepingAvatar(p, now); continue; }
+    const em = p.emu > Date.now() ? p.em : '';
+    drawAvatar(ctx, p.x, p.y, p, p.moving, frame, p.dir, em);
   }
+  // 「座る」を押したキャラだけ、座面/背もたれを前景として重ねる。
+  for (const p of all) {
+    if (p.sleep || !p.sit) continue;
+    const seat = seatedAt(p);
+    drawSeatForeground(ctx, seat);
+  }
+  drawWarpEffects(now);
   ctx.restore();
   for (const p of all) drawTag(p, frame);
   requestAnimationFrame(loop);
 }
+// ================= 寝る演出（ベッドの上で横向きに寝そべる） =================
+function drawSleepingAvatar(p, now) {
+  // 体ごと90度回転させて横たわる見た目に。回転の向きは、寝る直前に向いていた顔の向き(sleepDir)で決める
+  const rightward = p.sleepDir !== 'left';
+  ctx.save();
+  ctx.translate(p.x, p.y); ctx.rotate(rightward ? Math.PI / 2 : -Math.PI / 2); ctx.translate(-p.x, -p.y);
+  drawAvatar(ctx, p.x, p.y, p, false, 0, 'down', '');
+  ctx.restore();
+  const bob = Math.sin(now / 400) * 2;
+  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  const zx = p.x + (rightward ? 16 : -16), zy = p.y - 18 + bob;
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(23,18,31,.55)'; ctx.strokeText('Zzz', zx, zy);
+  ctx.fillStyle = '#fff'; ctx.fillText('Zzz', zx, zy);
+}
+// ================= ワープ演出（ダブルクリック瞬間移動のエフェクト） =================
+let warpEffects = [];
+function spawnWarpEffect(x, y) { warpEffects.push({ x, y, start: performance.now() }); }
+function drawWarpEffects(now) {
+  const DUR = 420;
+  warpEffects = warpEffects.filter(e => now - e.start < DUR);
+  for (const e of warpEffects) {
+    const t = (now - e.start) / DUR;
+    const ease = 1 - Math.pow(1 - t, 2);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - t);
+    ctx.translate(e.x, e.y - 8);
+    for (let i = 0; i < 2; i++) {
+      const r = 3 + ease * (16 - i * 5);
+      ctx.strokeStyle = i === 0 ? '#8ac8f8' : '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
 function drawTag(p, frame) {
-  const nx = p.x * S, ny = (p.y - 35) * S;
+  const nx = (p.x - camX) * S, ny = Math.max((p.y - camY - (p.sit ? 41 : 35)) * S, 23);
   ctx.font = 'bold 17px sans-serif'; ctx.textAlign = 'center';
   const em = p.emu > Date.now() ? p.em : '';
-  const icon = em === 'dance' ? '💃 ' : em === 'ssj' ? '⚡ ' : (p.st === 'break' ? '☕ ' : '💻 ');
+  const icon = p.sleep ? '🛏 ' : p.sit ? '🪑 ' : em === 'dance' ? '💃 ' : em === 'ssj' ? '⚡ ' : (p.st === 'break' ? '☕ ' : '💻 ');
   const tag = icon + p.name;
   const tw = ctx.measureText(tag).width + 14;
   const isMe = me && p.id === me.id;
@@ -1225,7 +1775,7 @@ function drawTag(p, frame) {
     const lines = wrap(b.text, 20);
     const bw = Math.min(380, Math.max(...lines.map(l => ctx.measureText(l).width)) + 22);
     const bh = lines.length * 21 + 13;
-    const bx = Math.min(Math.max(nx, bw / 2 + 4), W * S - bw / 2 - 4);
+    const bx = Math.min(Math.max(nx, bw / 2 + 4), cv.width - bw / 2 - 4);
     const by = Math.max(ny - 26 - bh, 4);
     ctx.fillStyle = '#fff'; rr(bx - bw / 2, by, bw, bh, 8);
     ctx.beginPath(); ctx.moveTo(nx - 6, by + bh); ctx.lineTo(nx + 6, by + bh); ctx.lineTo(nx, by + bh + 8); ctx.fill();
