@@ -71,14 +71,27 @@
   #log .n { color: #b8791e; font-weight: bold; }
   #log .t { color: #222; }
   #log .tm { color: #999; font-size: 10px; margin-right: 5px; }
-  #log .chat-row { position: relative; min-height: 22px; padding-right: 25px; }
+  #log .chat-row { position: relative; min-height: 22px; padding-right: 50px; }
+  #log .chat-reply { position: absolute; top: 0; right: 25px; width: 22px; height: 22px; padding: 0;
+    border: 0; border-radius: 5px; background: transparent; color: #8f8794; cursor: pointer;
+    font-size: 15px; line-height: 20px; opacity: 0; pointer-events: none;
+    transition: opacity .12s ease, background .12s ease, color .12s ease; }
   #log .chat-delete { position: absolute; top: 0; right: 0; width: 22px; height: 22px; padding: 0;
     border: 0; border-radius: 5px; background: transparent; color: #8f8794; cursor: pointer;
     font-size: 19px; font-weight: bold; line-height: 20px; opacity: 0; pointer-events: none;
     transition: opacity .12s ease, background .12s ease, color .12s ease; }
+  #log .chat-row:hover .chat-reply, #log .chat-row:focus-within .chat-reply,
   #log .chat-row:hover .chat-delete, #log .chat-row:focus-within .chat-delete {
     opacity: 1; pointer-events: auto;
   }
+  #log .chat-reply:hover, #log .chat-reply:focus-visible { background: #edf1f8; color: #315f9e; outline: none; }
+  #log .chat-reply::after { content: 'このメッセージに返信'; position: absolute; z-index: 4;
+    top: 50%; right: 26px; transform: translateY(-50%); padding: 4px 7px;
+    border: 1px solid #d9d1dc; border-radius: 6px; background: #30283a; color: #fff;
+    box-shadow: 0 3px 10px rgba(25,18,35,.2); font-size: 10px; font-weight: normal;
+    line-height: 1.25; white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity .12s ease; }
+  #log .chat-reply:hover::after, #log .chat-reply:focus-visible::after { opacity: 1; }
   #log .chat-delete:hover, #log .chat-delete:focus-visible { background: #f3e9e9; color: #b33c3c; outline: none; }
   #log .chat-delete::after { content: 'メッセージを削除する'; position: absolute; z-index: 4;
     top: 50%; right: 26px; transform: translateY(-50%); padding: 4px 7px;
@@ -87,8 +100,11 @@
     line-height: 1.25; white-space: nowrap; opacity: 0; pointer-events: none;
     transition: opacity .12s ease; }
   #log .chat-delete:hover::after, #log .chat-delete:focus-visible::after { opacity: 1; }
+  #log .chat-quote { display: block; margin: 2px 0 3px; padding: 3px 6px; overflow: hidden;
+    border-left: 3px solid #e8b45a; border-radius: 3px; background: #f3f0f6; color: #6f6678;
+    font-size: 10px; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
   @media (hover: none) {
-    #log .chat-delete { opacity: .7; pointer-events: auto; }
+    #log .chat-reply, #log .chat-delete { opacity: .7; pointer-events: auto; }
   }
   #log a { color: #1a73c9; word-break: break-all; }
   #log img.chatimg { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 3px 0; cursor: zoom-in; }
@@ -104,6 +120,15 @@
     box-shadow: 0 4px 12px rgba(0,0,0,.4); animation: toastIn .18s ease-out; }
   .toast .n { color: #e8b45a; font-weight: bold; }
   @keyframes toastIn { from { transform: translateX(24px); opacity: 0; } }
+  #chatReplyBar { display: flex; align-items: center; justify-content: space-between; gap: 7px;
+    padding: 5px 7px 5px 9px; border-top: 2px solid #e8b45a; background: #fff8e8; color: #4a4350;
+    font-size: 10px; line-height: 1.35; }
+  #chatReplyBar[hidden] { display: none; }
+  #chatReplySummary { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #chatReplyName { color: #b8791e; }
+  #chatReplyCancel { flex: 0 0 auto; width: 23px; height: 23px; padding: 0; border: 0;
+    background: transparent; color: #6f6678; font-size: 17px; line-height: 21px; }
+  #chatReplyCancel:hover, #chatReplyCancel:focus-visible { background: #eee6f0; color: #332a3d; outline: none; }
   #chatForm { display: flex; gap: 4px; padding: 6px; border-top: 2px solid #120d1c; }
   #chatInput { flex: 1; min-width: 0; padding: 8px; font-size: 13px; color: #222; border-radius: 6px; border: none; }
   #bar { width: min(2200px, 98vw); margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -217,6 +242,7 @@
   <div id="chatPanel">
     <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
+    <div id="chatReplyBar" hidden><span id="chatReplySummary"><strong id="chatReplyName"></strong><span id="chatReplyText"></span></span><button id="chatReplyCancel" type="button" aria-label="返信をやめる" title="返信をやめる">×</button></div>
     <div id="chatForm">
       <button id="imgBtn" title="画像を送る">📎</button>
       <input id="imgInput" type="file" accept="image/*" style="display:none">
@@ -1224,7 +1250,7 @@ function connect() {
     if (notifiedChatKeys.has(chatKey)) return;
     notifiedChatKeys.add(chatKey);
     if (notifiedChatKeys.size > 160) notifiedChatKeys.delete(notifiedChatKeys.values().next().value);
-    addLog(m.n, m.t || '', m.ts, m.img, m.pid || '', chatKey);
+    addLog(m.n, m.t || '', m.ts, m.img, m.pid || '', chatKey, m.r || null);
     const age = Date.now() - Number(m.ts || 0);
     const fresh = age >= -5000 && age < 15000;
     if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
@@ -1253,7 +1279,7 @@ function linkify(el, text) {
   }
   el.appendChild(document.createTextNode(text.slice(last)));
 }
-function addLog(n, t, ts, img, pid = '', key = '') {
+function addLog(n, t, ts, img, pid = '', key = '', replyTo = null) {
   const log = document.getElementById('log');
   const div = document.createElement('div'); div.className = 'chat-row';
   if (key) div.dataset.chatKey = key;
@@ -1262,6 +1288,11 @@ function addLog(n, t, ts, img, pid = '', key = '') {
   tm.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = n + '：';
   div.appendChild(tm); div.appendChild(nm);
+  if (replyTo?.n) {
+    const quote = document.createElement('span'); quote.className = 'chat-quote';
+    quote.textContent = `↩ ${replyTo.n}：${replyTo.t || '📷 画像'}`;
+    div.appendChild(quote);
+  }
   if (t) { const tx = document.createElement('span'); tx.className = 't'; linkify(tx, t); div.appendChild(tx); }
   if (img) {
     const im2 = document.createElement('img'); im2.className = 'chatimg'; im2.src = img;
@@ -1272,6 +1303,9 @@ function addLog(n, t, ts, img, pid = '', key = '') {
     div.appendChild(im2);
   }
   if (key && me) {
+    const reply = document.createElement('button'); reply.type = 'button'; reply.className = 'chat-reply';
+    reply.textContent = '↩'; reply.setAttribute('aria-label', 'このメッセージに返信');
+    reply.addEventListener('click', () => startChatReply(key, n, t, !!img)); div.appendChild(reply);
     const del = document.createElement('button'); del.type = 'button'; del.className = 'chat-delete';
     del.textContent = '⋮'; del.setAttribute('aria-label', 'メッセージを削除する');
     del.addEventListener('click', () => deleteChatMessage(key)); div.appendChild(del);
@@ -1510,11 +1544,37 @@ function keyMove(dt, now) {
 }
 
 // ================= チャット・ステータス・エモート =================
+let chatReplyDraft = null;
+function replySnippet(text, hasImage = false) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return (clean || (hasImage ? '📷 画像' : 'メッセージ')).slice(0, 80);
+}
+function startChatReply(key, name, text, hasImage = false) {
+  if (!key || !name) return false;
+  chatReplyDraft = { k: String(key), n: String(name).slice(0, 40), t: replySnippet(text, hasImage) };
+  const bar = document.getElementById('chatReplyBar');
+  document.getElementById('chatReplyName').textContent = `${chatReplyDraft.n}さんに返信：`;
+  document.getElementById('chatReplyText').textContent = chatReplyDraft.t;
+  bar.hidden = false;
+  const input = document.getElementById('chatInput');
+  input.placeholder = `${chatReplyDraft.n}さんに返信…`; input.focus();
+  return true;
+}
+function cancelChatReply() {
+  chatReplyDraft = null;
+  document.getElementById('chatReplyBar').hidden = true;
+  document.getElementById('chatInput').placeholder = 'メッセージ…';
+}
+function currentChatReplyPayload() {
+  return chatReplyDraft ? { k: chatReplyDraft.k, n: chatReplyDraft.n, t: chatReplyDraft.t } : null;
+}
 function sendChat() {
   const inp = document.getElementById('chatInput');
   const t = inp.value.trim(); if (!t || !me || !db) return;
-  db.ref('rooms/main/chat').push({ n: me.name, t, pid: me.id, ts: firebase.database.ServerValue.TIMESTAMP });
-  inp.value = '';
+  const payload = { n: me.name, t, pid: me.id, ts: firebase.database.ServerValue.TIMESTAMP };
+  const reply = currentChatReplyPayload(); if (reply) payload.r = reply;
+  db.ref('rooms/main/chat').push(payload);
+  inp.value = ''; cancelChatReply();
 }
 function formatChatDateValue(date) {
   const pad = value => String(value).padStart(2, '0');
@@ -1577,7 +1637,8 @@ async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間'
     const d = new Date(m.ts || 0);
     const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (day !== curDay) { curDay = day; md += `\n## ${day}\n\n`; }
-    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${m.t || '📷（画像）'}\n`;
+    const reply = m.r?.n ? `↩ ${m.r.n}「${m.r.t || '📷 画像'}」への返信 — ` : '';
+    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${reply}${m.t || '📷（画像）'}\n`;
   }
   const now = new Date();
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -1601,6 +1662,7 @@ window.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.getElementById('chatExportOverlay').classList.contains('open')) closeChatExport();
 });
 document.getElementById('sendBtn').addEventListener('click', sendChat);
+document.getElementById('chatReplyCancel').addEventListener('click', cancelChatReply);
 // 画像添付（800pxに縮小してJPEG化→チャットに載せる）
 document.getElementById('imgBtn').addEventListener('click', () => {
   if (!me || !db) { alert('入室してから送ってね'); return; }
@@ -1610,6 +1672,7 @@ document.getElementById('imgInput').addEventListener('change', e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f || !me || !db) return;
+  const reply = currentChatReplyPayload();
   const img = new Image();
   img.onload = () => {
     const sc2 = Math.min(1, 800 / Math.max(img.width, img.height));
@@ -1620,7 +1683,9 @@ document.getElementById('imgInput').addEventListener('change', e => {
     let data = c.toDataURL('image/jpeg', 0.72);
     if (data.length > 380000) data = c.toDataURL('image/jpeg', 0.45);
     if (data.length > 380000) { alert('画像が大きすぎて送れませんでした🙏'); return; }
-    db.ref('rooms/main/chat').push({ n: me.name, pid: me.id, img: data, ts: firebase.database.ServerValue.TIMESTAMP });
+    const payload = { n: me.name, pid: me.id, img: data, ts: firebase.database.ServerValue.TIMESTAMP };
+    if (reply) payload.r = reply;
+    db.ref('rooms/main/chat').push(payload); cancelChatReply();
   };
   img.src = URL.createObjectURL(f);
 });
