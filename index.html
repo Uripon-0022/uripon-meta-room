@@ -111,6 +111,8 @@
     padding: 8px 14px; background: #4a3f63; color: #fff; cursor: pointer; }
   button.active { background: #e8b45a; color: #17121f; font-weight: bold; }
   #goHomeBtn { background: #8a4a5a; }
+  #stWork.action-feedback, #goHomeBtn.action-feedback { background: #e8b45a; color: #17121f; font-weight: bold;
+    transform: translateY(2px); box-shadow: inset 0 3px 7px rgba(23,18,31,.28); opacity: 1; cursor: wait; }
   #sitBtn { background: #5f7f68; }
   #sitBtn.active { background: #e8b45a; }
   #discordBtn { background: #5865F2; }
@@ -1637,14 +1639,33 @@ function setStatus(st) {
   document.getElementById('stWork').classList.toggle('active', st === 'work');
   document.getElementById('stBreak').classList.toggle('active', st === 'break');
 }
+function beginActionButtonFeedback(button, label) {
+  if (!button || button.disabled) return false;
+  button.disabled = true;
+  button.classList.add('action-feedback');
+  button.setAttribute('aria-busy', 'true');
+  button.textContent = label;
+  return true;
+}
+function endActionButtonFeedback(button, label) {
+  if (!button) return;
+  button.disabled = false;
+  button.classList.remove('action-feedback');
+  button.removeAttribute('aria-busy');
+  button.textContent = label;
+}
 let lastWorkNotify = 0;
-document.getElementById('stWork').addEventListener('click', () => {
+const workStatusButton = document.getElementById('stWork');
+workStatusButton.addEventListener('click', () => {
   if (!me) return;
+  if (!beginActionButtonFeedback(workStatusButton, '✓ 開始しました')) return;
   setStatus('work');
+  toast('ステータス', '🚢 作業を開始しました');
   if (Date.now() - lastWorkNotify > 60000) {
     lastWorkNotify = Date.now();
     notifyDiscord(`🚢 ${me.name}さんがメタ部屋で作業を開始しました！`);
   }
+  setTimeout(() => endActionButtonFeedback(workStatusButton, '▶ 作業開始'), 1100);
 });
 document.getElementById('stBreak').addEventListener('click', () => setStatus('break'));
 // ================= 椅子・ソファに座る =================
@@ -1697,7 +1718,15 @@ document.getElementById('sleepBtn').addEventListener('click', toggleSleep);
 function wakeUp() {
   if (me && me.sleep) { me.sleep = false; document.getElementById('sleepBtn').classList.remove('active'); me.push && me.push(); }
 }
-document.getElementById('goHomeBtn').addEventListener('click', goHome);
+const goHomeButton = document.getElementById('goHomeBtn');
+goHomeButton.addEventListener('click', () => {
+  if (!me || !beginActionButtonFeedback(goHomeButton, '✓ 帰宅します')) return;
+  toast('ステータス', '🏠 帰宅します。おつかれさまでした！');
+  setTimeout(() => {
+    endActionButtonFeedback(goHomeButton, '🏠 帰宅');
+    goHome();
+  }, 700);
+});
 function goHome() {
   if (!me) return;
   notifyDiscord(`🏠 ${me.name}さんが帰宅しました。おつかれさま！`);
