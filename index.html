@@ -27,6 +27,7 @@
   h1 { font-size: 14px; letter-spacing: 1px; font-weight: normal; }
   #online { font-size: 11px; opacity: .75; margin-left: 8px; cursor: help; border-bottom: 1px dotted currentColor; }
   #main { display: flex; gap: 8px; width: min(2200px, 98vw); align-items: stretch; }
+  #main.chat-left #chatPanel { order: -1; }
   #stageWrap { flex: 1; min-width: 0; display: flex; }
   #stage {
     position: relative; width: 100%; height: 100%;
@@ -53,7 +54,7 @@
   #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #fff; color: #333; border-bottom: 2px solid #eee; border-radius: 3px 3px 0 0;
     display: flex; justify-content: space-between; align-items: center; }
   #chatHeadActions { display: flex; align-items: center; gap: 4px; }
-  #chatSaveBtn, #chatNotifyBtn, #chatSoundBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
+  #chatSaveBtn, #chatNotifyBtn, #chatSoundBtn, #chatSideBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
   #chatNotifyBtn.active, #chatSoundBtn.active { background: #e8b45a; color: #17121f; }
   #chatNotifyBtn:disabled, #chatSoundBtn:disabled { cursor: not-allowed; opacity: .6; }
   #chatExportOverlay { position: fixed; inset: 0; z-index: 27; display: none;
@@ -187,7 +188,8 @@
     #main { flex-direction: column; height: auto !important; }
     #stageWrap { height: auto; }
     #stage { aspect-ratio: 480 / 320; height: auto !important; }
-    #chatPanel { width: 100%; height: 190px !important; }
+    #main.chat-left #chatPanel, #chatPanel { order: 1; width: 100%; height: 190px !important; }
+    #chatSideBtn { display: none; }
     #sharePane { inset: 4px; border-width: 2px; }
   }
   #login { position: fixed; inset: 0; background: rgba(255,255,255,.97); color: #2f2935;
@@ -246,7 +248,7 @@
     </div>
   </div></div>
   <div id="chatPanel">
-    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
+    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatSideBtn" type="button" title="チャットを左側へ移動">↔ 左へ</button><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
     <div id="chatReplyBar" hidden><span id="chatReplySummary"><strong id="chatReplyName"></strong><span id="chatReplyText"></span></span><button id="chatReplyCancel" type="button" aria-label="返信をやめる" title="返信をやめる">×</button></div>
     <div id="chatForm">
@@ -401,6 +403,25 @@ function fitLayout() {
   main.style.height = availH + 'px';
   resizeCanvas();
 }
+const CHAT_SIDE_PREF = 'm3_chat_side';
+function setChatSide(side, save = true) {
+  const normalized = side === 'left' ? 'left' : 'right';
+  const main = document.getElementById('main');
+  const button = document.getElementById('chatSideBtn');
+  main.classList.toggle('chat-left', normalized === 'left');
+  const nextSide = normalized === 'left' ? 'right' : 'left';
+  button.textContent = nextSide === 'left' ? '↔ 左へ' : '↔ 右へ';
+  button.title = `チャットを${nextSide === 'left' ? '左' : '右'}側へ移動`;
+  button.setAttribute('aria-label', button.title);
+  if (save) {
+    localStorage.setItem(CHAT_SIDE_PREF, normalized);
+    requestAnimationFrame(fitLayout);
+  }
+}
+setChatSide(localStorage.getItem(CHAT_SIDE_PREF) === 'left' ? 'left' : 'right', false);
+document.getElementById('chatSideBtn').addEventListener('click', () => {
+  setChatSide(document.getElementById('main').classList.contains('chat-left') ? 'right' : 'left');
+});
 window.addEventListener('resize', fitLayout);
 fitLayout();
 const SPEED = 56, DASH = 1.9;
