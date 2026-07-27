@@ -13,6 +13,9 @@ window.FIREBASE_CONFIG = {
 // Discordボイスチャンネルへのリンク（うりぽん号のボイスch）
 window.DISCORD_VOICE_URL = "https://discord.com/channels/1427549476062625905/1527009272041443441";
 
+// Discord通知などから案内する公開中のメタ部屋URL
+window.META_ROOM_URL = "https://uripon-0022.github.io/uripon-meta-room/";
+
 // Discord通知用Webhook URL（作業開始・帰宅をお知らせするチャンネルのWebhook）
 // ※このURLを知っている人は誰でもそのチャンネルに投稿できる。荒らされたらDiscord側でウェブフックを削除→再作成して差し替える
 // 信頼できるメンバー限定の運用として、クライアントから直接通知する

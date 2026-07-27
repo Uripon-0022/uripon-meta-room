@@ -1800,7 +1800,10 @@ workStatusButton.addEventListener('click', () => {
   toast('ステータス', '🚢 作業を開始しました');
   if (Date.now() - lastWorkNotify > 60000) {
     lastWorkNotify = Date.now();
-    notifyDiscord(`🚢 ${me.name}さんがメタ部屋で作業を開始しました！`);
+    const roomInvitation = window.META_ROOM_URL
+      ? `\n\nCome join us! 🚢\n${window.META_ROOM_URL}`
+      : '';
+    notifyDiscord(`🚢 ${me.name}さんがメタ部屋で作業を開始しました！${roomInvitation}`);
   }
   setTimeout(() => endActionButtonFeedback(workStatusButton, '▶ 作業開始'), 1100);
 });
