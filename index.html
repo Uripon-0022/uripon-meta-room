@@ -1226,6 +1226,36 @@ document.getElementById('roomPassword').addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) unlockRoomWithPassword();
 });
 
+const PLAYER_STALE_MS = 10 * 60 * 60 * 1000;
+const PLAYER_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+let latestPlayersForCleanup = {};
+let playerCleanupRunning = false;
+function stalePlayerIds(data, now = Date.now()) {
+  return Object.entries(data || {})
+    .filter(([id, player]) => id !== me?.id && Number(player?.ts || 0) > 0 && now - Number(player.ts) >= PLAYER_STALE_MS)
+    .map(([id]) => id);
+}
+async function cleanupStalePlayers(data = latestPlayersForCleanup, now = Date.now()) {
+  if (!db || playerCleanupRunning) return 0;
+  const ids = stalePlayerIds(data, now);
+  if (!ids.length) return 0;
+  playerCleanupRunning = true;
+  try {
+    await Promise.all(ids.map(id => db.ref('rooms/main/players/' + id).transaction(current => {
+      if (!current) return current;
+      const lastActive = Number(current.ts || 0);
+      return lastActive > 0 && now - lastActive >= PLAYER_STALE_MS ? null : undefined;
+    })));
+    return ids.length;
+  } catch (error) {
+    console.warn('古い在室データの自動掃除に失敗しました', error);
+    return 0;
+  } finally {
+    playerCleanupRunning = false;
+  }
+}
+setInterval(() => cleanupStalePlayers(), PLAYER_CLEANUP_INTERVAL_MS);
+
 function connect() {
   initFirebaseServices();
   myRef = db.ref('rooms/main/players/' + me.id);
@@ -1252,6 +1282,8 @@ function connect() {
   });
   db.ref('rooms/main/players').on('value', snap => {
     const data = snap.val() || {};
+    latestPlayersForCleanup = data;
+    cleanupStalePlayers(data);
     for (const id of Object.keys(others)) if (!data[id]) delete others[id];
     let n = 0;
     for (const [id, p] of Object.entries(data)) {
@@ -1605,6 +1637,7 @@ async function sendChat() {
   chatSending = true; button.disabled = true; button.textContent = '送信中…';
   try {
     await db.ref('rooms/main/chat').push().set(payload);
+    me.push && me.push();
     inp.value = ''; cancelChatReply();
   } catch (error) {
     console.warn('チャット送信に失敗しました', error);
@@ -1723,7 +1756,7 @@ document.getElementById('imgInput').addEventListener('change', e => {
     const payload = { n: me.name, pid: me.id, img: data, ts: firebase.database.ServerValue.TIMESTAMP };
     if (reply) payload.r = reply;
     db.ref('rooms/main/chat').push().set(payload)
-      .then(() => cancelChatReply())
+      .then(() => { me.push && me.push(); cancelChatReply(); })
       .catch(error => { console.warn('画像送信に失敗しました', error); toast('送信', '画像を送信できませんでした'); });
   };
   img.src = URL.createObjectURL(f);
