@@ -52,10 +52,12 @@
   #chatPanel { width: 270px; display: flex; flex-direction: column; overflow: hidden;
     background: #fff; border: 3px solid #120d1c; border-radius: 6px; }
   #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #fff; color: #333; border-bottom: 2px solid #eee; border-radius: 3px 3px 0 0;
-    display: flex; justify-content: space-between; align-items: center; }
-  #chatHeadActions { display: flex; align-items: center; gap: 4px; }
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 6px; }
+  #chatHead > span:first-child { min-width: max-content; }
+  #chatHeadActions { display: flex; flex: 1 0 auto; align-items: center; justify-content: flex-end; gap: 4px; }
   #chatHistoryLabel { margin-left: 5px; color: #8b8290; font-size: 10px; font-weight: normal; }
-  #chatSaveBtn, #chatNotifyBtn, #chatSoundBtn, #chatSideBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
+  #chatSaveBtn, #chatObsidianBtn, #chatNotifyBtn, #chatSoundBtn, #chatSideBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
+  #chatObsidianBtn { color: #6741a5; background: #f0e8ff; border-color: #c7afea; }
   #chatNotifyBtn.active, #chatSoundBtn.active { background: #e8b45a; color: #17121f; }
   #chatNotifyBtn:disabled, #chatSoundBtn:disabled { cursor: not-allowed; opacity: .6; }
   #chatExportOverlay { position: fixed; inset: 0; z-index: 27; display: none;
@@ -75,6 +77,23 @@
   #chatExportRange { width: 100%; margin-top: 12px; background: #e8b45a; color: #17121f;
     border-color: #d19b3f; font-weight: bold; }
   #chatExportNote { margin: 10px 0 0; color: #817787; font-size: 11px; line-height: 1.5; }
+  #obsidianOverlay { position: fixed; inset: 0; z-index: 28; display: none;
+    align-items: center; justify-content: center; padding: 16px; background: rgba(34,28,44,.42); }
+  #obsidianOverlay.open { display: flex; }
+  #obsidianBox { width: min(450px, 94vw); padding: 18px; background: #fff; color: #2f2935;
+    border: 3px solid #8b67c7; border-radius: 14px; box-shadow: 0 12px 38px rgba(25,18,35,.3); }
+  #obsidianHead { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 12px; font-size: 16px; }
+  #obsidianClose { background: #f1edf4; color: #2f2935; border-color: #ddd4e3; padding: 4px 10px; }
+  #obsidianBox label { display: grid; gap: 5px; margin-top: 10px; color: #62596a; font-size: 12px; }
+  #obsidianBox input { width: 100%; box-sizing: border-box; padding: 9px 10px;
+    border: 1px solid #d7cfdf; border-radius: 7px; background: #fff; color: #2f2935; font: inherit; }
+  #obsidianSendBtn { width: 100%; margin-top: 14px; padding: 10px; background: #7650b3;
+    border-color: #65429f; color: #fff; font-weight: bold; }
+  #obsidianLaunchLink { display: block; margin-top: 10px; text-align: center; color: #6741a5; font-size: 12px; }
+  #obsidianLaunchLink[hidden] { display: none; }
+  #obsidianStatus { min-height: 1.4em; margin: 10px 0 0; color: #6d6474; font-size: 11px; line-height: 1.5; }
+  #obsidianNote { margin: 8px 0 0; color: #8a7f90; font-size: 10px; line-height: 1.5; }
   #log { flex: 1; overflow-y: auto; padding: 8px 10px; font-size: 12px; line-height: 1.7; min-height: 0; background: #fff; }
   #log .n { color: #b8791e; font-weight: bold; }
   #log .t { color: #222; }
@@ -270,7 +289,7 @@
     </div>
   </div></div>
   <div id="chatPanel">
-    <div id="chatHead"><span>💬 チャット <small id="chatHistoryLabel">直近3日</small></span><span id="chatHeadActions"><button id="chatSideBtn" type="button" title="チャットを左側へ移動">↔ 左へ</button><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
+    <div id="chatHead"><span>💬 チャット <small id="chatHistoryLabel">直近3日</small></span><span id="chatHeadActions"><button id="chatSideBtn" type="button" title="チャットを左側へ移動">↔ 左へ</button><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatObsidianBtn" type="button" title="今日のチャットをObsidianへ保存" aria-label="今日のチャットをObsidianへ保存">💎</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
     <div id="chatReplyBar" hidden><span id="chatReplySummary"><strong id="chatReplyName"></strong><span id="chatReplyText"></span></span><button id="chatReplyCancel" type="button" aria-label="返信をやめる" title="返信をやめる">×</button></div>
     <div id="chatForm">
@@ -297,6 +316,22 @@
     </div>
     <button id="chatExportRange" type="button">この期間を保存</button>
     <p id="chatExportNote">指定した日を両方含めて、Markdownファイルに保存します。</p>
+  </div>
+</div>
+
+<div id="obsidianOverlay" aria-hidden="true">
+  <div id="obsidianBox" role="dialog" aria-modal="true" aria-labelledby="obsidianTitle">
+    <div id="obsidianHead"><strong id="obsidianTitle">💎 今日のログをObsidianへ</strong><button id="obsidianClose" type="button">✕ 閉じる</button></div>
+    <label>自分のVault名
+      <input id="obsidianVault" type="text" maxlength="80" placeholder="例：My Vault" autocomplete="off">
+    </label>
+    <label>保存フォルダ
+      <input id="obsidianFolder" type="text" maxlength="160" value="うりぽん号/メタ部屋チャット（自動保存）" autocomplete="off">
+    </label>
+    <button id="obsidianSendBtn" type="button">今日のログをObsidianへ保存</button>
+    <a id="obsidianLaunchLink" hidden>Obsidianを開く</a>
+    <p id="obsidianStatus" role="status"></p>
+    <p id="obsidianNote">初回はブラウザの「Obsidianを開く」を許可してね。ログは一時的にこの端末のクリップボードを経由します。日別の専用ファイルを更新するため会話は重複しません。専用ファイルへ手書きした内容は次回保存時に上書きされます。</p>
   </div>
 </div>
 
@@ -1804,22 +1839,28 @@ function saveChatRangeFromInputs() {
   closeChatExport();
   return saveChatMd(from.start, to.end, label);
 }
-// チャットログをMarkdownで保存（Firebaseから履歴を取得し、指定期間だけ抽出）
-async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間') {
+async function collectChatMessages(startMs = null, endMs = null) {
   if (!db) { alert('入室してから保存してね'); return; }
-  const snap = await db.ref('rooms/main/chat').once('value');
+  let query = db.ref('rooms/main/chat');
+  if (startMs !== null || endMs !== null) {
+    query = query.orderByChild('ts');
+    if (startMs !== null) query = query.startAt(startMs);
+    if (endMs !== null) query = query.endAt(endMs);
+  }
+  const snap = await query.once('value');
   const msgs = [];
   snap.forEach(s => {
     const m = s.val(); if (!m || (!m.t && !m.img)) return;
-    const ts = Number(m.ts) || 0;
-    if (startMs !== null && ts < startMs) return;
-    if (endMs !== null && ts > endMs) return;
     msgs.push(m);
   });
-  if (!msgs.length) { alert(`${rangeLabel}のチャットはありません`); return; }
   msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  return msgs;
+}
+function buildChatMarkdown(msgs, rangeLabel, { obsidian = false } = {}) {
   const pad = v => String(v).padStart(2, '0');
-  let md = `# うりぽん号メタ部屋 チャットログ\n\n保存範囲: ${rangeLabel}\n\n`;
+  let md = obsidian
+    ? `---\ntags:\n  - うりぽん号\n  - メタ部屋チャット\ndate: ${rangeLabel}\nsource: uripon-meta-room\n---\n\n# うりぽん号メタ部屋 チャットログ\n\n> このファイルはメタ部屋から自動生成されます。手書きの追記は別のノートへ保存してください。\n\n`
+    : `# うりぽん号メタ部屋 チャットログ\n\n保存範囲: ${rangeLabel}\n\n`;
   let curDay = '';
   for (const m of msgs) {
     const d = new Date(m.ts || 0);
@@ -1832,6 +1873,13 @@ async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間'
     }).filter(Boolean).join(' ');
     md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${reply}${m.t || '📷（画像）'}${reactionText ? ` （${reactionText}）` : ''}\n`;
   }
+  return md;
+}
+// チャットログをMarkdownで保存（Firebaseから履歴を取得し、指定期間だけ抽出）
+async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間') {
+  const msgs = await collectChatMessages(startMs, endMs);
+  if (!msgs?.length) { alert(`${rangeLabel}のチャットはありません`); return; }
+  const md = buildChatMarkdown(msgs, rangeLabel);
   const now = new Date();
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const a = document.createElement('a');
@@ -1841,17 +1889,80 @@ async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間'
   a.click();
   URL.revokeObjectURL(a.href);
 }
+const OBSIDIAN_VAULT_PREF = 'm3_obsidian_vault';
+const OBSIDIAN_FOLDER_PREF = 'm3_obsidian_folder';
+function closeObsidianExport() {
+  const overlay = document.getElementById('obsidianOverlay');
+  overlay.classList.remove('open'); overlay.setAttribute('aria-hidden', 'true');
+}
+function openObsidianExport() {
+  if (!db) { alert('入室してから保存してね'); return; }
+  const vault = document.getElementById('obsidianVault');
+  const folder = document.getElementById('obsidianFolder');
+  vault.value = localStorage.getItem(OBSIDIAN_VAULT_PREF) || vault.value;
+  folder.value = localStorage.getItem(OBSIDIAN_FOLDER_PREF) || folder.value;
+  document.getElementById('obsidianStatus').textContent = '';
+  document.getElementById('obsidianLaunchLink').hidden = true;
+  const overlay = document.getElementById('obsidianOverlay');
+  overlay.classList.add('open'); overlay.setAttribute('aria-hidden', 'false');
+  if (!vault.value) setTimeout(() => vault.focus(), 0);
+}
+function normalizeObsidianFolder(value) {
+  return String(value || '').trim().replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\/|\/$/g, '');
+}
+function validObsidianFolder(folder) {
+  if (!folder) return true;
+  return folder.split('/').every(segment => segment && segment !== '.' && segment !== '..'
+    && !/[#^|?*<>:"\\[\]]/.test(segment));
+}
+async function saveTodayToObsidian() {
+  const vault = document.getElementById('obsidianVault').value.trim();
+  const folder = normalizeObsidianFolder(document.getElementById('obsidianFolder').value);
+  const status = document.getElementById('obsidianStatus');
+  const button = document.getElementById('obsidianSendBtn');
+  const link = document.getElementById('obsidianLaunchLink');
+  if (!vault) { status.textContent = '自分のVault名を入力してね。'; document.getElementById('obsidianVault').focus(); return; }
+  if (!validObsidianFolder(folder)) { status.textContent = '保存フォルダ名に使えない記号が含まれています。'; return; }
+  if (!navigator.clipboard?.writeText) { status.textContent = 'このブラウザはObsidianへの直接保存に対応していません。💾保存からMarkdownを利用してね。'; return; }
+  button.disabled = true; button.textContent = 'ログを準備しています…'; link.hidden = true;
+  try {
+    const bounds = dayBoundsFromValue(formatChatDateValue(new Date()));
+    const msgs = await collectChatMessages(bounds.start, bounds.end);
+    if (!msgs?.length) { status.textContent = '今日のチャットはまだありません。'; return; }
+    const md = buildChatMarkdown(msgs, bounds.label, { obsidian: true });
+    await navigator.clipboard.writeText(md);
+    localStorage.setItem(OBSIDIAN_VAULT_PREF, vault);
+    localStorage.setItem(OBSIDIAN_FOLDER_PREF, folder);
+    const file = `${folder ? folder + '/' : ''}${bounds.label}_メタ部屋チャット`;
+    const uri = `obsidian://new?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(file)}&clipboard=true&overwrite=true`;
+    link.href = uri; link.hidden = false;
+    status.textContent = 'ログを用意しました。確認画面が出たら「Obsidianを開く」を選んでね。';
+    link.click();
+  } catch (error) {
+    console.warn('Obsidianへの保存準備に失敗しました', error);
+    status.textContent = '保存を準備できませんでした。ブラウザのクリップボード許可を確認してね。';
+  } finally {
+    button.disabled = false; button.textContent = '今日のログをObsidianへ保存';
+  }
+}
 document.getElementById('chatSaveBtn').addEventListener('click', openChatExport);
+document.getElementById('chatObsidianBtn').addEventListener('click', openObsidianExport);
 document.getElementById('chatExportClose').addEventListener('click', closeChatExport);
 document.getElementById('chatExportToday').addEventListener('click', () => saveChatDay(0));
 document.getElementById('chatExportYesterday').addEventListener('click', () => saveChatDay(1));
 document.getElementById('chatExportAll').addEventListener('click', () => { closeChatExport(); saveChatMd(); });
 document.getElementById('chatExportRange').addEventListener('click', saveChatRangeFromInputs);
+document.getElementById('obsidianClose').addEventListener('click', closeObsidianExport);
+document.getElementById('obsidianSendBtn').addEventListener('click', saveTodayToObsidian);
 document.getElementById('chatExportOverlay').addEventListener('click', event => {
   if (event.target.id === 'chatExportOverlay') closeChatExport();
 });
+document.getElementById('obsidianOverlay').addEventListener('click', event => {
+  if (event.target.id === 'obsidianOverlay') closeObsidianExport();
+});
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape' && document.getElementById('chatExportOverlay').classList.contains('open')) closeChatExport();
+  if (event.key === 'Escape' && document.getElementById('obsidianOverlay').classList.contains('open')) closeObsidianExport();
 });
 document.getElementById('sendBtn').addEventListener('click', sendChat);
 document.getElementById('chatReplyCancel').addEventListener('click', cancelChatReply);
