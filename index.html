@@ -86,8 +86,9 @@
     margin-bottom: 12px; font-size: 16px; }
   #obsidianClose { background: #f1edf4; color: #2f2935; border-color: #ddd4e3; padding: 4px 10px; }
   #obsidianBox label { display: grid; gap: 5px; margin-top: 10px; color: #62596a; font-size: 12px; }
-  #obsidianBox input { width: 100%; box-sizing: border-box; padding: 9px 10px;
+  #obsidianBox input, #obsidianBox select { width: 100%; box-sizing: border-box; padding: 9px 10px;
     border: 1px solid #d7cfdf; border-radius: 7px; background: #fff; color: #2f2935; font: inherit; }
+  #obsidianFolderHelp { margin: 5px 0 0; color: #8a7f90; font-size: 10px; line-height: 1.4; }
   #obsidianSendBtn { width: 100%; margin-top: 14px; padding: 10px; background: #7650b3;
     border-color: #65429f; color: #fff; font-weight: bold; }
   #obsidianLaunchLink { display: block; margin-top: 10px; text-align: center; color: #6741a5; font-size: 12px; }
@@ -325,9 +326,18 @@
     <label>自分のVault名
       <input id="obsidianVault" type="text" maxlength="80" placeholder="例：My Vault" autocomplete="off">
     </label>
-    <label>保存フォルダ
-      <input id="obsidianFolder" type="text" maxlength="160" value="うりぽん号/メタ部屋チャット（自動保存）" autocomplete="off">
+    <label>保存先の種類
+      <select id="obsidianFolderPreset">
+        <option value="contentFactory">コンテンツファクトリー（04_RESOURCE）</option>
+        <option value="uripon">うりぽん号フォルダ</option>
+        <option value="root">Vault直下</option>
+        <option value="custom">自由に指定</option>
+      </select>
     </label>
+    <label>保存フォルダ
+      <input id="obsidianFolder" type="text" maxlength="160" value="04_RESOURCE/うりぽん号/メタ部屋チャット（自動保存）" autocomplete="off">
+    </label>
+    <p id="obsidianFolderHelp">候補を選ぶとここへ反映されます。自分の構成に合わせて書き換えてもOKです。</p>
     <button id="obsidianSendBtn" type="button">今日のログをObsidianへ保存</button>
     <a id="obsidianLaunchLink" hidden>Obsidianを開く</a>
     <p id="obsidianStatus" role="status"></p>
@@ -1891,6 +1901,16 @@ async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間'
 }
 const OBSIDIAN_VAULT_PREF = 'm3_obsidian_vault';
 const OBSIDIAN_FOLDER_PREF = 'm3_obsidian_folder';
+const OBSIDIAN_FOLDER_PRESETS = Object.freeze({
+  contentFactory: '04_RESOURCE/うりぽん号/メタ部屋チャット（自動保存）',
+  uripon: 'うりぽん号/メタ部屋チャット（自動保存）',
+  root: '',
+});
+function syncObsidianFolderPreset(folder) {
+  const preset = document.getElementById('obsidianFolderPreset');
+  const match = Object.entries(OBSIDIAN_FOLDER_PRESETS).find(([, value]) => value === folder);
+  preset.value = match ? match[0] : 'custom';
+}
 function closeObsidianExport() {
   const overlay = document.getElementById('obsidianOverlay');
   overlay.classList.remove('open'); overlay.setAttribute('aria-hidden', 'true');
@@ -1900,7 +1920,9 @@ function openObsidianExport() {
   const vault = document.getElementById('obsidianVault');
   const folder = document.getElementById('obsidianFolder');
   vault.value = localStorage.getItem(OBSIDIAN_VAULT_PREF) || vault.value;
-  folder.value = localStorage.getItem(OBSIDIAN_FOLDER_PREF) || folder.value;
+  const savedFolder = localStorage.getItem(OBSIDIAN_FOLDER_PREF);
+  folder.value = savedFolder !== null ? savedFolder : OBSIDIAN_FOLDER_PRESETS.contentFactory;
+  syncObsidianFolderPreset(folder.value);
   document.getElementById('obsidianStatus').textContent = '';
   document.getElementById('obsidianLaunchLink').hidden = true;
   const overlay = document.getElementById('obsidianOverlay');
@@ -1954,6 +1976,14 @@ document.getElementById('chatExportAll').addEventListener('click', () => { close
 document.getElementById('chatExportRange').addEventListener('click', saveChatRangeFromInputs);
 document.getElementById('obsidianClose').addEventListener('click', closeObsidianExport);
 document.getElementById('obsidianSendBtn').addEventListener('click', saveTodayToObsidian);
+document.getElementById('obsidianFolderPreset').addEventListener('change', event => {
+  const folder = document.getElementById('obsidianFolder');
+  if (event.target.value === 'custom') { folder.focus(); return; }
+  folder.value = OBSIDIAN_FOLDER_PRESETS[event.target.value] ?? folder.value;
+});
+document.getElementById('obsidianFolder').addEventListener('input', event => {
+  syncObsidianFolderPreset(normalizeObsidianFolder(event.target.value));
+});
 document.getElementById('chatExportOverlay').addEventListener('click', event => {
   if (event.target.id === 'chatExportOverlay') closeChatExport();
 });
