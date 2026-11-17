@@ -54,6 +54,7 @@
   #chatHead { padding: 6px 8px 6px 10px; font-size: 13px; font-weight: bold; background: #fff; color: #333; border-bottom: 2px solid #eee; border-radius: 3px 3px 0 0;
     display: flex; justify-content: space-between; align-items: center; }
   #chatHeadActions { display: flex; align-items: center; gap: 4px; }
+  #chatHistoryLabel { margin-left: 5px; color: #8b8290; font-size: 10px; font-weight: normal; }
   #chatSaveBtn, #chatNotifyBtn, #chatSoundBtn, #chatSideBtn { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
   #chatNotifyBtn.active, #chatSoundBtn.active { background: #e8b45a; color: #17121f; }
   #chatNotifyBtn:disabled, #chatSoundBtn:disabled { cursor: not-allowed; opacity: .6; }
@@ -78,7 +79,14 @@
   #log .n { color: #b8791e; font-weight: bold; }
   #log .t { color: #222; }
   #log .tm { color: #999; font-size: 10px; margin-right: 5px; }
-  #log .chat-row { position: relative; min-height: 22px; padding-right: 50px; }
+  #log .chat-day-divider { display: flex; align-items: center; gap: 7px; margin: 8px 0 5px;
+    color: #8a7f90; font-size: 10px; font-weight: bold; }
+  #log .chat-day-divider::before, #log .chat-day-divider::after { content: ''; flex: 1; height: 1px; background: #e5dfe8; }
+  #log .chat-row { position: relative; min-height: 22px; padding-right: 75px; }
+  #log .chat-react { position: absolute; top: 0; right: 50px; width: 22px; height: 22px; padding: 0;
+    border: 0; border-radius: 5px; background: transparent; color: #8f8794; cursor: pointer;
+    font-size: 14px; line-height: 20px; opacity: 0; pointer-events: none;
+    transition: opacity .12s ease, background .12s ease, color .12s ease; }
   #log .chat-reply { position: absolute; top: 0; right: 25px; width: 22px; height: 22px; padding: 0;
     border: 0; border-radius: 5px; background: transparent; color: #8f8794; cursor: pointer;
     font-size: 15px; line-height: 20px; opacity: 0; pointer-events: none;
@@ -87,10 +95,24 @@
     border: 0; border-radius: 5px; background: transparent; color: #8f8794; cursor: pointer;
     font-size: 19px; font-weight: bold; line-height: 20px; opacity: 0; pointer-events: none;
     transition: opacity .12s ease, background .12s ease, color .12s ease; }
+  #log .chat-row:hover .chat-react, #log .chat-row:focus-within .chat-react,
   #log .chat-row:hover .chat-reply, #log .chat-row:focus-within .chat-reply,
   #log .chat-row:hover .chat-delete, #log .chat-row:focus-within .chat-delete {
     opacity: 1; pointer-events: auto;
   }
+  #log .chat-react:hover, #log .chat-react:focus-visible { background: #fff1cf; color: #8c651c; outline: none; }
+  #log .chat-reaction-picker { position: absolute; z-index: 7; top: 24px; right: 0; display: none; gap: 3px;
+    padding: 5px; border: 1px solid #d9d1dc; border-radius: 8px; background: #fff;
+    box-shadow: 0 5px 16px rgba(25,18,35,.22); }
+  #log .chat-reaction-picker.open { display: flex; }
+  #log .chat-reaction-option { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+    background: transparent; font-size: 17px; line-height: 26px; }
+  #log .chat-reaction-option:hover, #log .chat-reaction-option:focus-visible { background: #fff1cf; outline: none; }
+  #log .chat-reactions { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 0 2px; }
+  #log .chat-reactions[hidden] { display: none; }
+  #log .chat-reaction-chip { min-width: 35px; height: 23px; padding: 1px 7px; border: 1px solid #ded6e2;
+    border-radius: 12px; background: #f5f2f7; color: #4d4553; font-size: 11px; line-height: 18px; }
+  #log .chat-reaction-chip.active { border-color: #d4a245; background: #fff1cf; color: #6e4d11; }
   #log .chat-reply:hover, #log .chat-reply:focus-visible { background: #edf1f8; color: #315f9e; outline: none; }
   #log .chat-reply::after { content: 'このメッセージに返信'; position: absolute; z-index: 4;
     top: 50%; right: 26px; transform: translateY(-50%); padding: 4px 7px;
@@ -111,7 +133,7 @@
     border-left: 3px solid #e8b45a; border-radius: 3px; background: #f3f0f6; color: #6f6678;
     font-size: 10px; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
   @media (hover: none) {
-    #log .chat-reply, #log .chat-delete { opacity: .7; pointer-events: auto; }
+    #log .chat-react, #log .chat-reply, #log .chat-delete { opacity: .7; pointer-events: auto; }
   }
   #log a { color: #1a73c9; word-break: break-all; }
   #log img.chatimg { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; margin: 3px 0; cursor: zoom-in; }
@@ -248,7 +270,7 @@
     </div>
   </div></div>
   <div id="chatPanel">
-    <div id="chatHead"><span>💬 チャット</span><span id="chatHeadActions"><button id="chatSideBtn" type="button" title="チャットを左側へ移動">↔ 左へ</button><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
+    <div id="chatHead"><span>💬 チャット <small id="chatHistoryLabel">直近3日</small></span><span id="chatHeadActions"><button id="chatSideBtn" type="button" title="チャットを左側へ移動">↔ 左へ</button><button id="chatNotifyBtn" type="button" title="新着チャットの通知をオンにする" aria-pressed="false">🔔 通知</button><button id="chatSoundBtn" type="button" title="新着チャットの音をオンにする" aria-pressed="false">🔊 音</button><button id="chatSaveBtn" title="チャットログをMarkdownで保存">💾 保存</button></span></div>
     <div id="log"></div>
     <div id="chatReplyBar" hidden><span id="chatReplySummary"><strong id="chatReplyName"></strong><span id="chatReplyText"></span></span><button id="chatReplyCancel" type="button" aria-label="返信をやめる" title="返信をやめる">×</button></div>
     <div id="chatForm">
@@ -988,6 +1010,15 @@ function notifyDiscord(text) {
 // 権限要求はユーザー操作が必要なため、チャット見出しのボタンからのみ行う。
 const CHAT_NOTIFICATION_PREF = 'm3_chat_notifications';
 const CHAT_SOUND_PREF = 'm3_chat_sound';
+const CHAT_HISTORY_DAYS = 3;
+const CHAT_HISTORY_LIMIT = 500;
+const CHAT_REACTIONS = Object.freeze([
+  { id: 'like', emoji: '👍', label: 'いいね' },
+  { id: 'heart', emoji: '❤️', label: 'ハート' },
+  { id: 'clap', emoji: '👏', label: '拍手' },
+  { id: 'laugh', emoji: '😂', label: '笑った' },
+  { id: 'fire', emoji: '🔥', label: '最高' },
+]);
 const notifiedChatKeys = new Set();
 let chatNotificationRegistrationPromise = null;
 let chatAudioContext = null;
@@ -1303,13 +1334,18 @@ function connect() {
     onlineEl.textContent = me ? `🟢 いま ${n} 人がオンライン` : `部屋には ${n} 人います`;
     onlineEl.title = names.length ? 'オンライン中: ' + names.join('・') : '';
   });
-  db.ref('rooms/main/chat').limitToLast(40).on('child_added', snap => {
+  const chatHistoryStart = new Date();
+  chatHistoryStart.setHours(0, 0, 0, 0);
+  chatHistoryStart.setDate(chatHistoryStart.getDate() - (CHAT_HISTORY_DAYS - 1));
+  const chatQuery = db.ref('rooms/main/chat').orderByChild('ts')
+    .startAt(chatHistoryStart.getTime()).limitToLast(CHAT_HISTORY_LIMIT);
+  chatQuery.on('child_added', snap => {
     const m = snap.val(); if (!m) return;
     const chatKey = snap.key || `${m.pid || ''}:${m.ts || ''}:${m.t || ''}`;
     if (notifiedChatKeys.has(chatKey)) return;
     notifiedChatKeys.add(chatKey);
-    if (notifiedChatKeys.size > 160) notifiedChatKeys.delete(notifiedChatKeys.values().next().value);
-    addLog(m.n, m.t || '', m.ts, m.img, m.pid || '', chatKey, m.r || null);
+    if (notifiedChatKeys.size > CHAT_HISTORY_LIMIT + 100) notifiedChatKeys.delete(notifiedChatKeys.values().next().value);
+    addLog(m.n, m.t || '', m.ts, m.img, m.pid || '', chatKey, m.r || null, m.rx || {});
     const age = Date.now() - Number(m.ts || 0);
     const fresh = age >= -5000 && age < 15000;
     if (fresh && m.pid) bubbles[m.pid] = { text: m.t || '📷 画像を送りました', until: Date.now() + 7000 };
@@ -1318,6 +1354,13 @@ function connect() {
       playChatNotificationSound();
       toast(m.n, m.t || '📷 画像');
     }
+  });
+  chatQuery.on('child_changed', snap => {
+    const m = snap.val();
+    const key = snap.key;
+    if (!m || !key) return;
+    const row = document.querySelector(`#log .chat-row[data-chat-key="${CSS.escape(key)}"]`);
+    if (row) renderChatReactions(row, key, m.rx || {});
   });
   db.ref('rooms/main/chat').on('child_removed', snap => {
     const key = snap.key; if (!key) return;
@@ -1338,11 +1381,68 @@ function linkify(el, text) {
   }
   el.appendChild(document.createTextNode(text.slice(last)));
 }
-function addLog(n, t, ts, img, pid = '', key = '', replyTo = null) {
+function chatDayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function chatDayLabel(date) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(date); target.setHours(0, 0, 0, 0);
+  const days = Math.round((today - target) / 86400000);
+  if (days === 0) return '今日';
+  if (days === 1) return '昨日';
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+function appendChatDayDivider(log, date) {
+  const key = chatDayKey(date);
+  if (log.dataset.lastChatDay === key) return;
+  log.dataset.lastChatDay = key;
+  const divider = document.createElement('div');
+  divider.className = 'chat-day-divider'; divider.dataset.chatDay = key;
+  divider.textContent = chatDayLabel(date); log.appendChild(divider);
+}
+function reactionMembers(reactions, reactionId) {
+  const values = reactions && typeof reactions[reactionId] === 'object' ? reactions[reactionId] : {};
+  return Object.keys(values).filter(id => values[id] === true);
+}
+function renderChatReactions(row, key, reactions = {}) {
+  let bar = row.querySelector('.chat-reactions');
+  if (!bar) { bar = document.createElement('div'); bar.className = 'chat-reactions'; row.appendChild(bar); }
+  bar.replaceChildren();
+  for (const reaction of CHAT_REACTIONS) {
+    const members = reactionMembers(reactions, reaction.id);
+    if (!members.length) continue;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'chat-reaction-chip';
+    if (me && members.includes(me.id)) button.classList.add('active');
+    button.textContent = `${reaction.emoji} ${members.length}`;
+    button.setAttribute('aria-label', `${reaction.label} ${members.length}件`);
+    button.addEventListener('click', () => toggleChatReaction(key, reaction.id));
+    bar.appendChild(button);
+  }
+  bar.hidden = bar.childElementCount === 0;
+}
+async function toggleChatReaction(key, reactionId) {
+  if (!db || !me || !key || !CHAT_REACTIONS.some(item => item.id === reactionId)) return false;
+  try {
+    const ref = db.ref(`rooms/main/chat/${key}/rx/${reactionId}/${me.id}`);
+    await ref.transaction(current => current === true ? null : true);
+    return true;
+  } catch (error) {
+    console.warn('リアクションを更新できませんでした', error);
+    toast('リアクション', '更新できませんでした'); return false;
+  }
+}
+function closeChatReactionPickers(except = null) {
+  document.querySelectorAll('#log .chat-reaction-picker.open').forEach(picker => {
+    if (picker !== except) picker.classList.remove('open');
+  });
+}
+function addLog(n, t, ts, img, pid = '', key = '', replyTo = null, reactions = {}) {
   const log = document.getElementById('log');
   const div = document.createElement('div'); div.className = 'chat-row';
   if (key) div.dataset.chatKey = key;
   const d = new Date(ts || Date.now());
+  appendChatDayDivider(log, d);
   const tm = document.createElement('span'); tm.className = 'tm';
   tm.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = n + '：';
@@ -1362,6 +1462,22 @@ function addLog(n, t, ts, img, pid = '', key = '', replyTo = null) {
     div.appendChild(im2);
   }
   if (key && me) {
+    const react = document.createElement('button'); react.type = 'button'; react.className = 'chat-react';
+    react.textContent = '☺'; react.setAttribute('aria-label', 'リアクションを付ける');
+    const picker = document.createElement('div'); picker.className = 'chat-reaction-picker';
+    for (const reaction of CHAT_REACTIONS) {
+      const option = document.createElement('button'); option.type = 'button'; option.className = 'chat-reaction-option';
+      option.textContent = reaction.emoji; option.title = reaction.label; option.setAttribute('aria-label', reaction.label);
+      option.addEventListener('click', event => {
+        event.stopPropagation(); picker.classList.remove('open'); toggleChatReaction(key, reaction.id);
+      });
+      picker.appendChild(option);
+    }
+    react.addEventListener('click', event => {
+      event.stopPropagation(); const open = !picker.classList.contains('open');
+      closeChatReactionPickers(picker); picker.classList.toggle('open', open);
+    });
+    div.appendChild(react); div.appendChild(picker);
     const reply = document.createElement('button'); reply.type = 'button'; reply.className = 'chat-reply';
     reply.textContent = '↩'; reply.setAttribute('aria-label', 'このメッセージに返信');
     reply.addEventListener('click', () => startChatReply(key, n, t, !!img)); div.appendChild(reply);
@@ -1369,9 +1485,10 @@ function addLog(n, t, ts, img, pid = '', key = '', replyTo = null) {
     del.textContent = '⋮'; del.setAttribute('aria-label', 'メッセージを削除する');
     del.addEventListener('click', () => deleteChatMessage(key)); div.appendChild(del);
   }
+  renderChatReactions(div, key, reactions);
   log.appendChild(div); log.scrollTop = log.scrollHeight;
-  while (log.children.length > 80) log.removeChild(log.firstChild);
 }
+document.addEventListener('click', () => closeChatReactionPickers());
 async function deleteChatMessage(key) {
   if (!db || !me || !key || !confirm('このメッセージを削除しますか？')) return false;
   try {
@@ -1387,6 +1504,7 @@ async function deleteChatMessage(key) {
 document.getElementById('lightbox').addEventListener('click', () => {
   document.getElementById('lightbox').style.display = 'none';
 });
+
 // チャット通知トースト（右上・5秒で消える・最大3件）
 function toast(name, text) {
   const box = document.getElementById('toasts');
@@ -1708,7 +1826,11 @@ async function saveChatMd(startMs = null, endMs = null, rangeLabel = '全期間'
     const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     if (day !== curDay) { curDay = day; md += `\n## ${day}\n\n`; }
     const reply = m.r?.n ? `↩ ${m.r.n}「${m.r.t || '📷 画像'}」への返信 — ` : '';
-    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${reply}${m.t || '📷（画像）'}\n`;
+    const reactionText = CHAT_REACTIONS.map(reaction => {
+      const count = reactionMembers(m.rx || {}, reaction.id).length;
+      return count ? `${reaction.emoji}×${count}` : '';
+    }).filter(Boolean).join(' ');
+    md += `- **${pad(d.getHours())}:${pad(d.getMinutes())} ${m.n}**: ${reply}${m.t || '📷（画像）'}${reactionText ? ` （${reactionText}）` : ''}\n`;
   }
   const now = new Date();
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
