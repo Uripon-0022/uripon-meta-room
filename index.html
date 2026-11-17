@@ -34,8 +34,34 @@
     border: 4px solid #120d1c; border-radius: 6px;
     overflow: hidden; background: #fff;
   }
+  body.season-christmas #stage { border-color: #6d2035; box-shadow: inset 0 0 0 2px rgba(255,220,126,.5); }
+  body.season-christmas header { box-shadow: inset 0 -3px 0 #b63d4f; }
   canvas.game { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated;
     cursor: pointer; touch-action: none; }
+  #seasonLayer { position: absolute; inset: 0; z-index: 2; display: none; overflow: hidden; pointer-events: none; }
+  #seasonLayer.active { display: block; }
+  #seasonDecor { position: absolute; left: 10px; bottom: 8px; width: clamp(92px, 17vw, 210px); height: auto;
+    image-rendering: pixelated; filter: drop-shadow(0 5px 4px rgba(20,15,29,.32)); }
+  #seasonLights { position: absolute; top: 6px; left: 4%; right: 4%; height: 20px;
+    border-top: 2px solid rgba(44,84,48,.82); }
+  #seasonLights span { position: absolute; top: -4px; width: 8px; height: 11px; border-radius: 45% 45% 55% 55%;
+    background: #ffd76a; box-shadow: 0 0 8px 2px rgba(255,215,106,.8); animation: seasonLight 1.8s ease-in-out infinite alternate; }
+  #seasonSnow { position: absolute; inset: 0; }
+  #seasonSnow .flake { position: absolute; top: -12%; color: rgba(255,255,255,.92); text-shadow: 0 1px 2px rgba(55,80,112,.5);
+    animation: seasonSnowFall var(--snow-duration) linear infinite; animation-delay: var(--snow-delay); }
+  #seasonEventBadge { display: none; margin-left: 7px; padding: 2px 7px; border-radius: 10px;
+    background: #edf7ed; color: #35643c; font-size: 10px; font-weight: bold; letter-spacing: 0; }
+  body.season-christmas #seasonEventBadge { display: inline-block; }
+  #seasonBtn.active { background: #edf7ed; border-color: #76a97c; color: #2b5a33; }
+  @keyframes seasonSnowFall {
+    from { transform: translate3d(0, -8%, 0) rotate(0deg); }
+    to { transform: translate3d(var(--snow-drift), 118vh, 0) rotate(300deg); }
+  }
+  @keyframes seasonLight { from { opacity: .45; transform: scale(.85); } to { opacity: 1; transform: scale(1.08); } }
+  @media (prefers-reduced-motion: reduce) {
+    #seasonSnow .flake { display: none; }
+    #seasonLights span { animation: none; }
+  }
   #sharePane {
     position: absolute; inset: 8px;
     background: #17121f; border: 3px solid #e8b45a; border-radius: 10px;
@@ -278,12 +304,17 @@
 </head>
 <body>
 <header>
-  <h1>🚢 うりぽん号メタ部屋 <span id="online">はじめに「入室する」を押してね</span></h1>
+  <h1>🚢 うりぽん号メタ部屋 <span id="seasonEventBadge">🎄 冬イベント開催中</span><span id="online">はじめに「入室する」を押してね</span></h1>
 </header>
 
 <div id="main">
   <div id="stageWrap"><div id="stage">
     <canvas id="cv" class="game" width="1440" height="960"></canvas>
+    <div id="seasonLayer" aria-hidden="true">
+      <div id="seasonLights"></div>
+      <div id="seasonSnow"></div>
+      <img id="seasonDecor" src="assets/season-christmas.png" alt="" decoding="async">
+    </div>
     <div id="sharePane">
       <div id="shareHead"><span id="shareTitle">画面共有</span><span><button id="shareFull" title="全画面で見る">⛶ 全画面</button><button id="shareClose">✕</button></span></div>
       <video id="shareVideo" autoplay playsinline muted></video>
@@ -357,6 +388,7 @@
   <button id="discordBtn">🎧 ボイス(Discord)</button>
   <button id="dressBtn">👗 着替える</button>
   <button id="decorBtn">🛋 デコ</button>
+  <button id="seasonBtn" type="button" hidden aria-pressed="false">🎄 冬イベント</button>
   <button id="zoomOutBtn" title="ズームアウト（全体表示）">🔎－</button>
   <button id="zoomInBtn" title="ズームイン">🔎＋</button>
 </div>
@@ -489,6 +521,59 @@ setChatSide(localStorage.getItem(CHAT_SIDE_PREF) === 'left' ? 'left' : 'right', 
 document.getElementById('chatSideBtn').addEventListener('click', () => {
   setChatSide(document.getElementById('main').classList.contains('chat-left') ? 'right' : 'left');
 });
+// ================= 季節イベント（毎年11/15〜12/26） =================
+const seasonButton = document.getElementById('seasonBtn');
+function isChristmasEventDate(date = new Date()) {
+  const monthDay = (date.getMonth() + 1) * 100 + date.getDate();
+  return monthDay >= 1115 && monthDay <= 1226;
+}
+function buildChristmasEffects() {
+  const lights = document.getElementById('seasonLights');
+  const snow = document.getElementById('seasonSnow');
+  if (!lights.children.length) {
+    const colors = ['#ffd76a', '#f36b6b', '#7fd5ff', '#9ee28f'];
+    for (let i = 0; i < 16; i++) {
+      const bulb = document.createElement('span');
+      bulb.style.left = `${(i / 15) * 100}%`;
+      bulb.style.background = colors[i % colors.length];
+      bulb.style.animationDelay = `${-(i % 4) * .35}s`;
+      lights.appendChild(bulb);
+    }
+  }
+  if (!snow.children.length) {
+    for (let i = 0; i < 28; i++) {
+      const flake = document.createElement('span');
+      flake.className = 'flake';
+      flake.textContent = i % 4 === 0 ? '❄' : '•';
+      flake.style.left = `${(i * 37) % 100}%`;
+      flake.style.fontSize = `${8 + (i * 5) % 11}px`;
+      flake.style.setProperty('--snow-duration', `${7 + (i % 7) * .8}s`);
+      flake.style.setProperty('--snow-delay', `${-((i * 1.37) % 10)}s`);
+      flake.style.setProperty('--snow-drift', `${(i % 2 ? -1 : 1) * (20 + (i * 17) % 75)}px`);
+      snow.appendChild(flake);
+    }
+  }
+}
+function setChristmasEvent(enabled, save = true) {
+  const available = isChristmasEventDate();
+  const active = available && enabled;
+  document.body.classList.toggle('season-christmas', active);
+  document.getElementById('seasonLayer').classList.toggle('active', active);
+  seasonButton.hidden = !available;
+  seasonButton.classList.toggle('active', active);
+  seasonButton.setAttribute('aria-pressed', String(active));
+  seasonButton.textContent = active ? '🎄 冬イベント' : '🎄 演出OFF';
+  seasonButton.title = active ? '冬イベントの演出をオフにする' : '冬イベントの演出をオンにする';
+  if (save && available) localStorage.setItem(`m3_christmas_${new Date().getFullYear()}`, active ? 'on' : 'off');
+}
+function initChristmasEvent() {
+  if (!isChristmasEventDate()) { setChristmasEvent(false, false); return; }
+  buildChristmasEffects();
+  const pref = localStorage.getItem(`m3_christmas_${new Date().getFullYear()}`);
+  setChristmasEvent(pref !== 'off', false);
+}
+seasonButton.addEventListener('click', () => setChristmasEvent(!document.body.classList.contains('season-christmas')));
+initChristmasEvent();
 window.addEventListener('resize', fitLayout);
 fitLayout();
 const SPEED = 56, DASH = 1.9;
