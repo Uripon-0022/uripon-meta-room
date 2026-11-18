@@ -678,24 +678,22 @@ function drawSittingHip(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh, bendY
   }
 }
 
-// 長めの上着がボトムを覆っても丸みが消えないよう、腰の後ろ半分だけを上から補う。
-function drawSittingHipAccent(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh) {
-  const forward = dir === 'right' ? 1 : -1;
-  // ボトムの布色が確実にある太もも上部を使い、長い上着より手前へ腰の丸みを戻す。
-  const sourceStart = Math.round(sourceH * 46 / 60);
-  const sourceEnd = Math.round(sourceH * 53 / 60);
-  const destStart = Math.round(sourceH * 41 / 60);
-  const halfW = Math.ceil(sourceW * 2 / 3);
-  const sourceX = dir === 'right' ? 0 : sourceW - halfW;
-  const destBaseX = dx + sourceX * dw / sourceW;
-  const destHalfW = halfW * dw / sourceW;
+// 座り中は上着の後ろ裾だけを丸く短くし、下に描いたボトムの腰を自然に見せる。
+function drawSideSittingTopFrame(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh) {
+  const hipStart = Math.round(sourceH * 40 / 60);
+  const hipEnd = Math.round(sourceH * 52 / 60);
   const rowH = Math.max(1, dh / sourceH + .35);
-  for (let sy = sourceStart; sy < sourceEnd; sy++) {
-    const t = (sy - sourceStart + 1) / Math.max(1, sourceEnd - sourceStart);
-    const bulge = Math.sin(Math.PI * t) * 5.2;
-    c2.drawImage(img, r.sx + sourceX, r.sy + sy, halfW, 1,
-      destBaseX - forward * bulge * dw / sourceW,
-      dy + (destStart + (sy - sourceStart) * .8) * dh / sourceH, destHalfW, rowH);
+  c2.drawImage(img, r.sx, r.sy, sourceW, hipStart,
+    dx, dy, dw, dh * hipStart / sourceH);
+  for (let sy = hipStart; sy < sourceH; sy++) {
+    const inHip = sy < hipEnd;
+    const t = inHip ? (sy - hipStart + 1) / Math.max(1, hipEnd - hipStart) : 1;
+    const trim = inHip ? Math.round(Math.sin(Math.PI * t) * 4.5) : 0;
+    const sourceX = dir === 'right' ? trim : 0;
+    const drawW = sourceW - trim;
+    c2.drawImage(img, r.sx + sourceX, r.sy + sy, drawW, 1,
+      dx + (dir === 'right' ? trim * dw / sourceW : 0),
+      dy + sy * dh / sourceH, drawW * dw / sourceW, rowH);
   }
 }
 
@@ -917,6 +915,8 @@ for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
   const seatY = y + (isCafeTopSeat ? 18 : isCafeSeat ? 0 : needsDepthOffset ? 10 : 0);
   const isMonitorSideSofa = id.startsWith('monitor_side_sofa_');
   const isRaisedLoungeSeat = id.startsWith('lounge_');
+  const isRedLoungeSeat = id.startsWith('lounge_red_');
+  const isLowerLowTableCushion = id.startsWith('low_table_') && id.endsWith('_bottom');
   const isWashitsuSeat = id.startsWith('meeting_') || id.startsWith('hall_sofa_') ||
     id.startsWith('small_lounge_') || id.startsWith('low_table_');
   SEATS.push({
@@ -924,11 +924,13 @@ for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
     pose: isWashitsuSeat ? 'seiza' : 'chair',
     // 縦ソファは体を開口側へ出し、脚がソファ横から見える位置にする。
     avatarOffsetX: isMonitorSideSofa ? (dir === 'right' ? 6 : -6) :
-      isRaisedLoungeSeat ? (dir === 'right' ? 8 : -8) : 0,
+      isRedLoungeSeat ? (dir === 'right' ? 8 : -8) : 0,
     // ラウンジ椅子を座面へ上げ、和室の小さい座椅子は正座が床へ沈まないよう少し上げる。
     // カフェ（アイス屋前）の小席は維持する。
     avatarOffsetY: isRaisedLoungeSeat ? -4.5 :
-      (id.startsWith('small_lounge_') || id.startsWith('hall_sofa_')) ? -2.5 : 0,
+      isLowerLowTableCushion ? -6 :
+      id.startsWith('small_lounge_') ? -2.5 :
+      id.startsWith('hall_sofa_') ? 1.5 : 0,
   });
 }
 
@@ -1047,14 +1049,12 @@ function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
     const assetId = cat === 'hair' ? hairAssetId(partId, av.hairColor) : partId;
     const source = cat === 'hair' && isFullHeadAccessory(av.accessory) ? PARTS_IMGS.costumehair : PARTS_IMGS[cat];
     const img = source[assetId];
-    // 髪を重ねる直前に腰の後ろ側を補い、長い上着でも座った丸みを残す。
-    if (cat === 'hair' && sideSitting) {
-      const bottomImg = PARTS_IMGS.bottom[av.bottom];
-      if (bottomImg) drawSittingHipAccent(c2, bottomImg, r, dir, PFW, PFH, dx, dy, dw, dh);
-    }
     if (img) {
       if (cat === 'hair' && isFullHeadAccessory(av.accessory)) {
         if (dir !== 'up') drawPartFrame(c2, img, r, PFW, PFH, dx, dy, dw, dh);
+      }
+      else if (cat === 'top' && sideSitting) {
+        drawSideSittingTopFrame(c2, img, r, dir, PFW, PFH, dx, dy, dw, dh);
       }
       else if (cat === 'bottom' && sideSitting) {
         const drawBottom = seiza ? drawSeizaBottomFrame : drawSideSittingBottomFrame;
