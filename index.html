@@ -666,15 +666,34 @@ function drawUpperBodyFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh, cutoff
 function drawSittingHip(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh, bendY) {
   const forward = dir === 'right' ? 1 : -1;
   const rowH = Math.max(1, dh / sourceH + .35);
-  const hipStart = Math.round(sourceH * 43 / 60);
+  const hipStart = Math.round(sourceH * 41 / 60);
   c2.drawImage(img, r.sx, r.sy, sourceW, bendY,
     dx, dy, dw, dh * bendY / sourceH);
   // 背中側へ数ピクセルだけ重ね、立ち絵の平らな腰を丸い座りシルエットにする。
   for (let sy = hipStart; sy < bendY; sy++) {
     const t = (sy - hipStart + 1) / Math.max(1, bendY - hipStart);
-    const bulge = Math.sin(Math.PI * t) * 3.2;
+    const bulge = Math.sin(Math.PI * t) * 5.2;
     c2.drawImage(img, r.sx, r.sy + sy, sourceW, 1,
       dx - forward * bulge * dw / sourceW, dy + sy * dh / sourceH, dw, rowH);
+  }
+}
+
+// 長めの上着がボトムを覆っても丸みが消えないよう、腰の後ろ半分だけを上から補う。
+function drawSittingHipAccent(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh) {
+  const forward = dir === 'right' ? 1 : -1;
+  const hipStart = Math.round(sourceH * 41 / 60);
+  const hipEnd = Math.round(sourceH * 47 / 60);
+  const halfW = Math.ceil(sourceW / 2);
+  const sourceX = dir === 'right' ? 0 : sourceW - halfW;
+  const destBaseX = dx + sourceX * dw / sourceW;
+  const destHalfW = halfW * dw / sourceW;
+  const rowH = Math.max(1, dh / sourceH + .35);
+  for (let sy = hipStart; sy < hipEnd; sy++) {
+    const t = (sy - hipStart + 1) / Math.max(1, hipEnd - hipStart);
+    const bulge = Math.sin(Math.PI * t) * 5.2;
+    c2.drawImage(img, r.sx + sourceX, r.sy + sy, halfW, 1,
+      destBaseX - forward * bulge * dw / sourceW,
+      dy + sy * dh / sourceH, destHalfW, rowH);
   }
 }
 
@@ -709,8 +728,8 @@ function drawSideSittingBottomFrame(c2, img, r, dir, sourceW, sourceH, dx, dy, d
 
 // 和室の座布団では、膝を少し前へ出してから足先を後ろへ畳む正座姿にする。
 function drawSeizaBottomFrame(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh) {
-  const bendY = Math.round(sourceH * 47 / 60);
-  const kneeY = Math.round(sourceH * 53 / 60);
+  const bendY = Math.round(sourceH * 46 / 60);
+  const kneeY = Math.round(sourceH * 52 / 60);
   const forward = dir === 'right' ? 1 : -1;
   const rowH = Math.max(1, dh / sourceH + .35);
 
@@ -718,16 +737,17 @@ function drawSeizaBottomFrame(c2, img, r, dir, sourceW, sourceH, dx, dy, dw, dh)
   const thighRows = Math.max(1, kneeY - bendY);
   for (let sy = bendY; sy < kneeY; sy++) {
     const t = (sy - bendY + 1) / thighRows;
-    const shiftX = forward * 3.2 * t * dw / sourceW;
-    const destY = dy + (bendY + t * 4) * dh / sourceH;
+    const shiftX = forward * 4.5 * t * dw / sourceW;
+    const destY = dy + (bendY + t * 3) * dh / sourceH;
     c2.drawImage(img, r.sx, r.sy + sy, sourceW, 1,
       dx + shiftX, destY, dw, rowH);
   }
   const shinRows = Math.max(1, sourceH - kneeY);
   for (let sy = kneeY; sy < sourceH; sy++) {
     const t = (sy - kneeY + 1) / shinRows;
-    const shiftX = forward * (3.2 - t * 5) * dw / sourceW;
-    const destY = dy + (bendY + 4 + t * 6) * dh / sourceH;
+    // 膝から足先をお尻の下へ水平に戻し、椅子座りのような垂れ脚を作らない。
+    const shiftX = forward * (4.5 - t * 10) * dw / sourceW;
+    const destY = dy + (bendY + 3 + t * 3.5) * dh / sourceH;
     c2.drawImage(img, r.sx, r.sy + sy, sourceW, 1,
       dx + shiftX, destY, dw, rowH);
   }
@@ -895,10 +915,10 @@ for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
   const seatY = y + (isCafeTopSeat ? 18 : isCafeSeat ? 0 : needsDepthOffset ? 10 : 0);
   const isMonitorSideSofa = id.startsWith('monitor_side_sofa_');
   const isRaisedLoungeSeat = id.startsWith('lounge_');
-  const isWashitsuLowTable = id.startsWith('low_table_');
+  const isWashitsuSeat = id.startsWith('meeting_') || id.startsWith('small_lounge_') || id.startsWith('low_table_');
   SEATS.push({
     id, kind: 'side', x: seatX, y: seatY, dir, foreground: [],
-    pose: isWashitsuLowTable ? 'seiza' : 'chair',
+    pose: isWashitsuSeat ? 'seiza' : 'chair',
     // 縦ソファは体を開口側へ出し、脚がソファ横から見える位置にする。
     avatarOffsetX: isMonitorSideSofa ? (dir === 'right' ? 6 : -6) : 0,
     // ラウンジ椅子だけ座面に合わせて上げる。カフェ（アイス屋前）の小席は維持する。
@@ -917,7 +937,7 @@ const FLOOR_SEAT_SPECS = [
   ['washitsu_zaisu_top', 64, 672, 'down'],
 ];
 for (const [id, x, y, dir] of FLOOR_SEAT_SPECS) {
-  SEATS.push({ id, kind: 'floor', x, y, dir, foreground: [] });
+  SEATS.push({ id, kind: 'floor', x, y, dir, foreground: [], pose: 'seiza' });
 }
 const SEAT_BY_ID = Object.fromEntries(SEATS.map(seat => [seat.id, seat]));
 function nearestSeat(x, y, maxDistance = 30) {
@@ -1021,6 +1041,11 @@ function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
     const assetId = cat === 'hair' ? hairAssetId(partId, av.hairColor) : partId;
     const source = cat === 'hair' && isFullHeadAccessory(av.accessory) ? PARTS_IMGS.costumehair : PARTS_IMGS[cat];
     const img = source[assetId];
+    // 髪を重ねる直前に腰の後ろ側を補い、長い上着でも座った丸みを残す。
+    if (cat === 'hair' && sideSitting) {
+      const bottomImg = PARTS_IMGS.bottom[av.bottom];
+      if (bottomImg) drawSittingHipAccent(c2, bottomImg, r, dir, PFW, PFH, dx, dy, dw, dh);
+    }
     if (img) {
       if (cat === 'hair' && isFullHeadAccessory(av.accessory)) {
         if (dir !== 'up') drawPartFrame(c2, img, r, PFW, PFH, dx, dy, dw, dh);
