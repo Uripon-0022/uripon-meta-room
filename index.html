@@ -656,8 +656,8 @@ function frameRect(dirName, frameN, moving, frameW = PFW, frameH = PFH) {
 function drawPartFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh) {
   c2.drawImage(img, r.sx, r.sy, sourceW, sourceH, dx, dy, dw, dh);
 }
-function drawUpperBodyFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh) {
-  const cutoff = Math.round(sourceH * 46 / 60);
+function drawUpperBodyFrame(c2, img, r, sourceW, sourceH, dx, dy, dw, dh, cutoffRow = 46) {
+  const cutoff = Math.round(sourceH * cutoffRow / 60);
   c2.drawImage(img, r.sx, r.sy, sourceW, cutoff, dx, dy, dw, dh * cutoff / sourceH);
 }
 
@@ -1001,7 +1001,9 @@ function drawAvatar(c2, lx, ly, av, moving, frame, dir, emote) {
   c2.rect(dx - (sideSitting ? 5 : 0), dy, dw + (sideSitting ? 10 : 0), visibleHeight);
   c2.clip();
   const upperBody = PARTS_IMGS.body[PD.defaultBody];
-  if (upperBody) drawUpperBodyFrame(c2, upperBody, r, PFW, PFH, dx, dy, dw, dh);
+  // 横向き着席では、立ち姿の下地ボディを腰までに留める。
+  // ボトムを曲げた隙間から肌色の脚が1本だけ見えるのを防ぐ。
+  if (upperBody) drawUpperBodyFrame(c2, upperBody, r, PFW, PFH, dx, dy, dw, dh, sideSitting ? 42 : 46);
   if (av.hair === 'long_wavy_brown') {
     const backImg = PARTS_IMGS.hairback[hairAssetId(av.hair, av.hairColor)];
     if (backImg) {
