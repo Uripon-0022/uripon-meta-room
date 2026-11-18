@@ -915,7 +915,6 @@ for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
   const seatY = y + (isCafeTopSeat ? 18 : isCafeSeat ? 0 : needsDepthOffset ? 10 : 0);
   const isMonitorSideSofa = id.startsWith('monitor_side_sofa_');
   const isRaisedLoungeSeat = id.startsWith('lounge_');
-  const isRedLoungeSeat = id.startsWith('lounge_red_');
   const isLowerLowTableCushion = id.startsWith('low_table_') && id.endsWith('_bottom');
   const isWashitsuSeat = id.startsWith('meeting_') || id.startsWith('hall_sofa_') ||
     id.startsWith('small_lounge_') || id.startsWith('low_table_');
@@ -923,8 +922,7 @@ for (const [id, x, y, dir] of SIDE_SEAT_SPECS) {
     id, kind: 'side', x: seatX, y: seatY, dir, foreground: [],
     pose: isWashitsuSeat ? 'seiza' : 'chair',
     // 縦ソファは体を開口側へ出し、脚がソファ横から見える位置にする。
-    avatarOffsetX: isMonitorSideSofa ? (dir === 'right' ? 6 : -6) :
-      isRedLoungeSeat ? (dir === 'right' ? 8 : -8) : 0,
+    avatarOffsetX: isMonitorSideSofa ? (dir === 'right' ? 6 : -6) : 0,
     // ラウンジ椅子を座面へ上げ、和室の小さい座椅子は正座が床へ沈まないよう少し上げる。
     // カフェ（アイス屋前）の小席は維持する。
     avatarOffsetY: isRaisedLoungeSeat ? -4.5 :
